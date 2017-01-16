@@ -34,6 +34,11 @@ def HLT(emulator, mem_addr):
     if INSTRUCTION_DEBUG:
         print(f"Instruction HLT")
     emulator.halt()
+    
+def PRX(emulator, mem_addr):
+    if INSTRUCTION_DEBUG:
+        print(f"Instruction PRX, [{mem_addr}] <- ({emulator.memory[mem_addr]})")
+    print(emulator.memory[mem_addr])
         
 instructions = {
     0b0000: NOP,
@@ -43,6 +48,7 @@ instructions = {
     0b0100: PRB,
     0b0101: ADD,
     0b0110: HLT,
+    0b0111: PRX,
 }
 
 class InstructionException(Exception):
