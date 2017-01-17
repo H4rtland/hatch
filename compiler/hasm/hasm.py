@@ -1,3 +1,6 @@
+import sys
+import os.path as op
+
 OPCODES = {
     "NOP": 0b0000,
     "LDA": 0b0001,
@@ -63,12 +66,14 @@ def assemble(hasm):
             output.append(addr)
         else:
             op = l[0]
-            if op in OPCODES:
+            if op.isdigit():
+                output.append(int(op))
+            elif op in OPCODES:
                 output.append(int(OPCODES[op]))
                 output.append(0)
             else:
-                # data
-                output.append(int(op))
+                raise Exception(f"Unknown instruction: {op}")
+                
     
     # Substitute labels
     for index, value in enumerate(output):
@@ -82,9 +87,18 @@ def assemble(hasm):
 
 
 if __name__ == "__main__":
-    with open("test.hasm", "r") as input_file:
-        hasm = input_file.readlines()
-    output = assemble(hasm)
-    with open("test.hb", "wb") as output_file:
-        output_file.write(bytes(output))
-    print("Complete")
+    if len(sys.argv) == 1:
+        print("No input file")
+    else:
+        input_filename = sys.argv[1]
+        print(input_filename)
+        if op.exists(input_filename):
+            with open(sys.argv[1], "r") as input_file:
+                hasm = input_file.readlines()
+            output = assemble(hasm)
+            basename = op.splitext(input_filename)[0]
+            with open(f"{basename}.hb", "wb") as output_file:
+                output_file.write(bytes(output))
+            print("Complete")
+        else:
+            print("Could not read input file")
