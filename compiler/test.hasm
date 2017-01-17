@@ -1,25 +1,25 @@
 .loop
-0   LDA 28      ; load A into reg A
-2   LDB 29      ; load B into reg B
-4   ADD 0       ; add A + B
-6   PRA 0       ; print reg A to screen
-8   STA 28      ; store sum back to memory
+LDA .x      ; load x into reg A
+LDB .y      ; load y into reg B
+ADD 0       ; add x + y
+PRA 0       ; print sum to screen
+STA .x      ; store sum back to x
 
-10  LDA 30      ; increment
-12  LDB 31      ; the
-14  ADD 0       ; loop
-16  STA 30      ; counter
+LDA .i      ; increment
+LDB .iplus  ; the
+ADD 0       ; loop
+STA .i      ; counter
 
-18  LDB 32
-20  CMP 0       ; compare A and B register
-22  JE  .halt   ; jump to halt if equal
-24  JMP .loop   ; jump to start of loop otherwise
+LDB .max
+CMP 0       ; compare A and B register
+JE  .halt   ; jump to halt if equal
+JMP .loop   ; jump to start of loop otherwise
 
 .halt
-26  HLT 0       ; suspend program
+HLT 0       ; suspend program
 
-28  0           ; initial A
-29  1           ; initial B
-30  0           ; increment counter
-31  1           ; increment by
-32  255         ; maximum value to count to
+.x      0   ; initial x
+.y      1   ; initial y
+.i      0   ; increment counter
+.iplus  1   ; increment by
+.max    255 ; maximum value to count to

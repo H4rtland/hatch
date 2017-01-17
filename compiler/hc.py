@@ -21,18 +21,18 @@ def assemble(hasm):
         line = line.split(";")[0]
         if line.startswith("."):
             labels[line.split()[0]] = len(output)
-            continue
+            line = " ".join(line.split()[1:])
         l = line.split()
         if len(l) == 0:
             continue
-        if len(l) == 3:
-            index, op, addr = l
+        if len(l) == 2:
+            op, addr = l
             if not addr.startswith("."):
                 addr = int(addr)
             output.append(OPCODES[op])
             output.append(addr)
         else:
-            index, data = l
+            data = l[0]
             output.append(int(data))
     
     # Substitute labels
