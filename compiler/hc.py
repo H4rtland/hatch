@@ -10,8 +10,16 @@ OPCODES = {
     "JMP": 0b1000,
     "STA": 0b1001,
     "STB": 0b1010,
-    "CMP": 0b1011,
-    "JE":  0b1100,
+    "INC": 0b1011,
+    "MOV": 0b1100,
+    "CMP": 0b1101,
+    "JE":  0b1110,
+}
+
+RESERVED_MEMORY = {
+    "AX": 255,
+    "BX": 254,
+    "CX": 253,
 }
 
 def assemble(hasm):
@@ -19,21 +27,48 @@ def assemble(hasm):
     labels = {}
     for line in hasm:
         line = line.split(";")[0]
+        line = line.replace(",", " ")
         if line.startswith("."):
             labels[line.split()[0]] = len(output)
             line = " ".join(line.split()[1:])
         l = line.split()
         if len(l) == 0:
             continue
-        if len(l) == 2:
+        if len(l) == 3:
+            op, addr1, addr2 = l
+            
+            if addr1 in RESERVED_MEMORY:
+                addr1 = RESERVED_MEMORY[addr1]
+            else:
+                raise Exception("MOV accessing non register memory")
+                
+            if addr2 in RESERVED_MEMORY:
+                addr2 = RESERVED_MEMORY[addr2]
+            else:
+                raise Exception("MOV accessing non register memory")
+            
+            byte = ((255-addr1) << 4) + (255-addr2)
+            
+            output.append(OPCODES[op])
+            output.append(byte)
+        elif len(l) == 2:
             op, addr = l
-            if not addr.startswith("."):
+            if addr.startswith("."):
+                pass
+            elif addr in RESERVED_MEMORY:
+                addr = RESERVED_MEMORY[addr]
+            else:
                 addr = int(addr)
             output.append(OPCODES[op])
             output.append(addr)
         else:
-            data = l[0]
-            output.append(int(data))
+            op = l[0]
+            if op in OPCODES:
+                output.append(int(OPCODES[op]))
+                output.append(0)
+            else:
+                # data
+                output.append(int(op))
     
     # Substitute labels
     for index, value in enumerate(output):

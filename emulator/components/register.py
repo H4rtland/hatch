@@ -37,6 +37,13 @@ class Register:
         reg = Register()
         reg.load(-self.stored_value)
         return reg
+    
+    def __eq__(self, other):
+        if isinstance(other, int):
+            return self.stored_value == other
+        elif isinstance(other, Register):
+            return self.stored_value == other.stored_value
+        return False
 
     def __repr__(self):
         return f"<Register {self.name}: {self.stored_value}>"

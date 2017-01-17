@@ -73,6 +73,16 @@ def STA(emulator, mem_addr):
 def STB(emulator, mem_addr):
     emulator.memory[mem_addr] = emulator.reg_b
 
+@debug_addr
+def INC(emulator, mem_addr):
+    emulator.memory[mem_addr] += 1
+    
+@debug_addr
+def MOV(emulator, mem_addr):
+    reg_1 = emulator.memory[255-((mem_addr & 0b11110000) >> 4)]
+    reg_2 = emulator.memory[255-(mem_addr & 0b1111)]
+    reg_1.load(reg_2.value)
+
 @debug_addr_data
 def CMP(emulator, mem_addr):
     reg_a = emulator.reg_a.value
@@ -98,8 +108,10 @@ instructions = {
     0b1000: JMP,
     0b1001: STA,
     0b1010: STB,
-    0b1011: CMP,
-    0b1100: JE,
+    0b1011: INC,
+    0b1100: MOV,
+    0b1101: CMP,
+    0b1110: JE,
 }
 
 class InstructionException(Exception):

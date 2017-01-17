@@ -11,9 +11,15 @@ class OctoEngine:
         self.comparisons = {"JE":False, "JG":False, "JL":False}
         
         self.memory = Memory()
+        
         self.reg_a = Register("A")
         self.reg_b = Register("B")
+        self.reg_counter = Register("COUNTER")
         self.instruction_register = Register("INST")
+        
+        self.memory.reserve(255, self.reg_a)
+        self.memory.reserve(254, self.reg_b)
+        self.memory.reserve(253, self.reg_counter)
 
     def load(self, bytestream):
         for index, byte in enumerate(bytestream):
