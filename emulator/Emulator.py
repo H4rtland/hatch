@@ -8,6 +8,7 @@ from components.instructions import instructions, InstructionException
 class OctoEngine:
     def __init__(self):
         self.halted = False
+        self.comparisons = {"JE":False, "JG":False, "JL":False}
         
         self.memory = Memory()
         self.reg_a = Register("A")
@@ -24,8 +25,8 @@ class OctoEngine:
         instruction = self.memory[self.instruction_register]
         self.instruction_register += 1
         mem_addr = self.memory[self.instruction_register]
-        instructions[instruction](self, mem_addr)
         self.instruction_register += 1
+        instructions[instruction](self, mem_addr)
         
     def run(self):
         while not self.halted:

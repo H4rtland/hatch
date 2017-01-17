@@ -1,8 +1,25 @@
-0   LDA 12
-2   LDB 13
+.loop
+0   LDA 28
+2   LDB 29
 4   ADD 0
-6   ADD 0
-8   PRA 0
-10  HLT 0
-12  13
-13  6
+6   PRA 0
+8   STA 28
+
+10  LDA 30      ; increment
+12  LDB 31      ; the
+14  ADD 0       ; loop
+16  STA 30      ; counter
+
+18  LDB 32
+20  CMP 0
+22  JE  .halt
+24  JMP .loop
+
+.halt
+26  HLT 0
+
+28  0           ; initial A
+29  1           ; initial B
+30  0           ; increment counter
+31  1           ; increment by
+32  255         ; maximum value to count to
