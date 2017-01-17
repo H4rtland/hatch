@@ -1,72 +1,88 @@
 INSTRUCTION_DEBUG = False
 
+def debug(function):
+    def wrapper(*args, **kwargs):
+        if INSTRUCTION_DEBUG:
+            print(f"Instruction {function.__name__}")
+        function(*args, **kwargs)
+    return wrapper
+
+def debug_addr(function):
+    def wrapper(*args, **kwargs):
+        if INSTRUCTION_DEBUG:
+            print(f"Instruction {function.__name__}, [{args[1]}]")
+        function(*args, **kwargs)
+    return wrapper
+
+def debug_addr_data(function):
+    def wrapper(*args, **kwargs):
+        if INSTRUCTION_DEBUG:
+            print(f"Instruction {function.__name__}, [{args[1]}] -> ({args[0].memory[args[1]]})")
+        function(*args, **kwargs)
+    return wrapper
+
+def debug_addr_data_store(function):
+    def wrapper(*args, **kwargs):
+        if INSTRUCTION_DEBUG:
+            print(f"Instruction {function.__name__}, [{args[1]}] <- ({args[0].memory[args[1]]})")
+        function(*args, **kwargs)
+    return wrapper
+        
+
+@debug
 def NOP(emulator, mem_addr):
-    if INSTRUCTION_DEBUG:
-        print("Instruction NOP")
     pass
 
+@debug_addr_data
 def LDA(emulator, mem_addr):
-    if INSTRUCTION_DEBUG:
-        print(f"Instruction LDA, [{mem_addr}] <- ({emulator.memory[mem_addr]})")
     emulator.reg_a.load(emulator.memory[mem_addr])
-    
+
+@debug_addr_data
 def LDB(emulator, mem_addr):
-    if INSTRUCTION_DEBUG:
-        print(f"Instruction LDB, [{mem_addr}] <- ({emulator.memory[mem_addr]})")
     emulator.reg_b.load(emulator.memory[mem_addr])
-    
+
+@debug
 def PRA(emulator, mem_addr):
-    if INSTRUCTION_DEBUG:
-        print(f"Instruction PRA")
     print(emulator.reg_a)
-    
+
+@debug
 def PRB(emulator, mem_addr):
-    if INSTRUCTION_DEBUG:
-        print(f"Instruction PRA")
     print(emulator.reg_b)
-    
+
+@debug
 def ADD(emulator, mem_addr):
-    if INSTRUCTION_DEBUG:
-        print(f"Instruction ADD")
     emulator.reg_a += emulator.reg_b
-    
+
+@debug
 def HLT(emulator, mem_addr):
-    if INSTRUCTION_DEBUG:
-        print(f"Instruction HLT")
     emulator.halt()
-    
+
+@debug_addr_data
 def PRX(emulator, mem_addr):
-    if INSTRUCTION_DEBUG:
-        print(f"Instruction PRX, [{mem_addr}] <- ({emulator.memory[mem_addr]})")
     print(emulator.memory[mem_addr])
-    
+
+@debug_addr
 def JMP(emulator, mem_addr):
-    if INSTRUCTION_DEBUG:
-        print(f"Instruction JMP, {mem_addr}")
     emulator.instruction_register.load(mem_addr)
-    
+
+@debug_addr_data_store
 def STA(emulator, mem_addr):
-    if INSTRUCTION_DEBUG:
-        print(f"Instruction STA, [{mem_addr}] <- ({emulator.memory[mem_addr]})")
     emulator.memory[mem_addr] = emulator.reg_a
-    
+
+@debug_addr_data_store
 def STB(emulator, mem_addr):
-    if INSTRUCTION_DEBUG:
-        print(f"Instruction STB, [{mem_addr}] <- ({emulator.memory[mem_addr]})")
     emulator.memory[mem_addr] = emulator.reg_b
-    
+
+@debug_addr_data
 def CMP(emulator, mem_addr):
-    if INSTRUCTION_DEBUG:
-        print(f"Instruction CMP, [{mem_addr}] <- ({emulator.memory[mem_addr]})")
     reg_a = emulator.reg_a.value
     reg_b = emulator.reg_b.value
     emulator.comparisons["JE"] = (reg_a == reg_b)
     emulator.comparisons["JG"] = (reg_a > reg_b)
     emulator.comparisons["JL"] = (reg_a < reg_b)
 
+@debug_addr
 def JE(emulator, mem_addr):
-    if INSTRUCTION_DEBUG:
-        print(f"Instruction JE")
     if emulator.comparisons["JE"]:
         emulator.instruction_register.load(mem_addr)
         
