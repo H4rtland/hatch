@@ -8,8 +8,10 @@ class Register:
         self.overflow = False
 
     def load(self, value):
-        if not type(value) is int:
+        if not (isinstance(value, int) or isinstance(value, Register)):
             raise RegisterException(f"Register {self.name} set to non integer value ({type(value).__name__}: {value})")
+        if isinstance(value, Register):
+            value = value.value
         if not 0 <= value <= 255:
             raise RegisterException(f"Loaded value < 0 or > 255 into register {self.name}")
         self.stored_value = value
@@ -37,6 +39,12 @@ class Register:
         reg = Register()
         reg.load(-self.stored_value)
         return reg
+    
+    def __and__(self, other):
+        return self.value & other
+    
+    def __or__(self, other):
+        return self.value & other
     
     def __eq__(self, other):
         if isinstance(other, int):

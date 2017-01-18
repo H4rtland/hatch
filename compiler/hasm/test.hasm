@@ -1,22 +1,22 @@
 .loop
-LDA .x      ; load x into reg A
-LDB .y      ; load y into reg B
+LDA [x]     ; load x into reg A
+LDB [y]     ; load y into reg B
 ADD         ; add x + y
 PRA         ; print sum to screen
-STA .x      ; store sum back to x
+STA [x]     ; store sum back to x
 
-INC CX      ; increment loop counter
+INC [CX]    ; increment loop counter
 
-LDB .max
-MOV AX, CX  ; copy increment counter to register A
+LDB 10      ; count to this value
+; MOV AX, CX    ; copy increment counter to register A
+LDA [CX]    ; copy increment counter into register A
 CMP         ; compare A and B register
 JE  .halt   ; jump to halt if equal
 JMP .loop   ; jump to start of loop otherwise
 
 .halt
-PRX CX      ; print contents of register A to screen
+PRX [CX]    ; print contents of register A to screen
 HLT         ; suspend program
 
 .x      0   ; initial x
 .y      1   ; initial y
-.max    200 ; maximum value to count to

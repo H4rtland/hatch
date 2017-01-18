@@ -26,13 +26,14 @@ class OctoEngine:
             self.memory[index] = byte
         
     def instruction_cycle(self):
-        if not self.memory[self.instruction_register] in instructions:
-            raise InstructionException(f"Undefined instruction: {self.instruction_register.value} at memory address {self.instruction_register.value}")
-        instruction = self.memory[self.instruction_register]
+        instruction = self.memory[self.instruction_register.value] & 0b0111_1111
+        if not instruction in instructions:
+            raise InstructionException(f"Undefined instruction: {instruction} at memory address {self.instruction_register.value}")
+        mem_flag = (self.memory[self.instruction_register.value] & 0b1000_0000) >> 7
         self.instruction_register += 1
-        mem_addr = self.memory[self.instruction_register]
+        data = self.memory[self.instruction_register]
         self.instruction_register += 1
-        instructions[instruction](self, mem_addr)
+        instructions[instruction](self, mem_flag, data)
         
     def run(self):
         while not self.halted:
@@ -49,9 +50,5 @@ if __name__ == "__main__":
         with open(sys.argv[1], "rb") as input_file:
             emulator.load(input_file.read())
     else:
-        # print("No input file")
-        #       LDA     [10]    LDB     [11]    ADD             PRA            HLT
-        inst = [0b0001, 0b1010, 0b0010, 0b1011, 0b0101, 0b0000, 0b011, 0b0000, 0b0110, 0b0000,
-                0b1100, 0b0101]
-        emulator.load(inst)
+        print("No input file")
     emulator.run()

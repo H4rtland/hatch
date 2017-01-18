@@ -56,13 +56,22 @@ def assemble(hasm):
             output.append(byte)
         elif len(l) == 2:
             op, addr = l
+            opcode = OPCODES[op]
             if addr.startswith("."):
                 pass
+            elif addr.startswith("[") and addr.endswith("]"):
+                opcode |= 0b1000_0000
+                if addr[1:-1] in RESERVED_MEMORY:
+                    addr = RESERVED_MEMORY[addr[1:-1]]
+                elif addr[1:-1].isdigit():
+                    addr = int(addr)
+                else:
+                    addr = "." + addr[1:-1]
             elif addr in RESERVED_MEMORY:
                 addr = RESERVED_MEMORY[addr]
             else:
                 addr = int(addr)
-            output.append(OPCODES[op])
+            output.append(opcode)
             output.append(addr)
         else:
             op = l[0]
@@ -99,6 +108,9 @@ if __name__ == "__main__":
             basename = op.splitext(input_filename)[0]
             with open(f"{basename}.hb", "wb") as output_file:
                 output_file.write(bytes(output))
+            
+            #with open(f"{basename}.hbytes", "w") as output_file:
+            #    output_file.writelines(map(lambda x: str(bin(x)[2:]).zfill(8) + "\n", output))
             print("Complete")
         else:
             print("Could not read input file")
