@@ -2,21 +2,22 @@ import sys
 import os.path as op
 
 OPCODES = {
-    "NOP": 0b0000,
-    "LDA": 0b0001,
-    "LDB": 0b0010,
-    "PRA": 0b0011,
-    "PRB": 0b0100,
-    "ADD": 0b0101,
-    "HLT": 0b0110,
-    "PRX": 0b0111,
-    "JMP": 0b1000,
-    "STA": 0b1001,
-    "STB": 0b1010,
-    "INC": 0b1011,
-    "MOV": 0b1100,
-    "CMP": 0b1101,
-    "JE":  0b1110,
+    "NOP": 0b00000,
+    "LDA": 0b00001,
+    "LDB": 0b00010,
+    "PRA": 0b00011,
+    "PRB": 0b00100,
+    "ADD": 0b00101,
+    "HLT": 0b00110,
+    "PRX": 0b00111,
+    "JMP": 0b01000,
+    "STA": 0b01001,
+    "STB": 0b01010,
+    "INC": 0b01011,
+    "DEC": 0b01100,
+    "MOV": 0b01101,
+    "CMP": 0b01110,
+    "JE":  0b01111,
 }
 
 RESERVED_MEMORY = {

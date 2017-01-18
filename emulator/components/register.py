@@ -27,9 +27,11 @@ class Register:
             self.stored_value += register
         elif type(register) is Register:
             self.stored_value += register.value
-        if not 0 <= self.stored_value <= 255:
+        
+        if self.stored_value > 255:
             self.stored_value %= 255
-            self.overflow = True
+        elif self.stored_value < 0:
+            self.stored_value = (self.stored_value % 255) + 1
         return self
 
     def __sub__(self, register):

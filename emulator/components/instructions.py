@@ -90,6 +90,10 @@ def INC(emulator, mem_flag, data):
     emulator.memory[data] += 1
     
 @debug_addr
+def DEC(emulator, mem_flag, data):
+    emulator.memory[data] -= 1
+    
+@debug_addr
 def MOV(emulator, mem_flag, data):
     reg_1 = emulator.memory[255-((data & 0b11110000) >> 4)]
     reg_2 = emulator.memory[255-(data & 0b1111)]
@@ -109,21 +113,22 @@ def JE(emulator, mem_flag, data):
         emulator.instruction_register.load(data)
         
 instructions = {
-    0b0000: NOP,
-    0b0001: LDA,
-    0b0010: LDB,
-    0b0011: PRA,
-    0b0100: PRB,
-    0b0101: ADD,
-    0b0110: HLT,
-    0b0111: PRX,
-    0b1000: JMP,
-    0b1001: STA,
-    0b1010: STB,
-    0b1011: INC,
-    0b1100: MOV,
-    0b1101: CMP,
-    0b1110: JE,
+    0b00000: NOP,
+    0b00001: LDA,
+    0b00010: LDB,
+    0b00011: PRA,
+    0b00100: PRB,
+    0b00101: ADD,
+    0b00110: HLT,
+    0b00111: PRX,
+    0b01000: JMP,
+    0b01001: STA,
+    0b01010: STB,
+    0b01011: INC,
+    0b01100: DEC,
+    0b01101: MOV,
+    0b01110: CMP,
+    0b01111: JE,
 }
 
 class InstructionException(Exception):
