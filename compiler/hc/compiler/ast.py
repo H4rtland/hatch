@@ -26,14 +26,33 @@ class Expression:
     def __init__(self, expression):
         self.expression = expression
         
-class Variable:
+class Assign:
+    def __init__(self, name, value):
+        self.name = name
+        self.value = value
+    
+    def print(self, indent=0):
+        print("    "*indent + f"<Assign: {self.name} = {self.value}>")
+            
+        
+class Let:
     def __init__(self, vtype, name, initial):
         self.vtype = vtype
         self.name = name
         self.initial = initial
-    
+        
     def print(self, indent=0):
-        print("    "*indent + f"<Variable: let {self.vtype.lexeme} {self.name.lexeme} = {self.initial};>")
+        print("    "*indent + f"<Variable: let {self.vtype.lexeme} {self.name.lexeme} = {self.initial}>")
+        
+class Variable:
+    def __init__(self, name):
+        self.name = name
+        
+    def print(self, indent=0):
+        print(self.name)
+    
+    def __repr__(self):
+        return f"<Variable: {self.name}>"
         
 class Literal:
     def __init__(self, value):
@@ -54,6 +73,18 @@ class If:
         if not self.otherwise is None:
             print("    "*indent + f"Otherwise:")
             self.otherwise.print(indent+1)
+            
+class Call:
+    def __init__(self, callee, paren, args):
+        self.callee = callee
+        self.paren = paren
+        self.args = args
+        
+    def print(self, indent=0):
+        print("    "*indent, self)
+    
+    def __repr__(self):
+        return f"<Call: func {self.callee}, args {self.args}>"
 
         
 class ASTParser:
@@ -154,7 +185,32 @@ class ASTParser:
         return self.assignment()
     
     def assignment(self):
-        return self.primary()
+        expr = self.call()
+        if self.match(TokenType.EQUAL):
+            value = self.assignment()
+            if (expr, Variable):
+                return Assign(expr.name, value)
+        return expr
+    
+    def call(self):
+        expr = self.primary()
+        while True:
+            if self.match(TokenType.LEFT_BRACKET):
+                expr = self.finish_call(expr)
+            else:
+                break
+        return expr
+    
+    def finish_call(self, callee):
+        args = []
+        if not self.check(TokenType.RIGHT_BRACKET):
+            while True:
+                args.append(self.expression())
+                if not self.match(TokenType.COMMA):
+                    break
+        paren = self.consume(TokenType.RIGHT_BRACKET, "Expected ')' to close function call")
+        
+        return Call(callee, paren, args)
         
     def primary(self):
         if self.match(TokenType.TRUE):
@@ -165,11 +221,16 @@ class ASTParser:
         if self.match(TokenType.STRING, TokenType.NUMBER):
             return Literal(self.previous().literal)
         
+        if self.match(TokenType.IDENTIFIER):
+            return Variable(self.previous().lexeme)
+        
+        return Literal(0)
+        
     def let(self):
         vtype = self.consume(TokenType.IDENTIFIER, "Expected variable type")
         name = self.consume(TokenType.IDENTIFIER, "Expected variable name")
         self.consume(TokenType.EQUAL, "Expected '=' in let statement")
         initial = self.expression()
         self.consume(TokenType.SEMICOLON, "Expected semicolon following let statement")
-        return Variable(vtype, name, initial)
+        return Let(vtype, name, initial)
         
