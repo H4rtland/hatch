@@ -5,7 +5,7 @@ function int get_num() {
 function void main(int number) {
     let int x = get_num();
     let string greeting = "hello, world!";
-    if (true) {
+    if (x == 4) {
         x = 2;
     } else {
         x = 3;

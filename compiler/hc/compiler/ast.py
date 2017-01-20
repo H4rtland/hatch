@@ -1,98 +1,6 @@
 from compiler.tokenizer import TokenType
+from compiler.expressions import *
 
-class Block:
-    def __init__(self, statements):
-        self.statements = statements
-    
-    def print(self, indent=0):
-        print("    "*indent + "<Block> {")
-        for statement in self.statements:
-            statement.print(indent+1)
-        print("    "*indent + "}")
-
-class Function:
-    def __init__(self, name, rtype, args, body):
-        self.name = name
-        self.rtype = rtype
-        self.args = args
-        self.body = body
-    
-    def print(self, indent=0):
-        print("    "*indent + f"function {self.rtype.lexeme} {self.name.lexeme} ({self.args}) {{")
-        self.body.print(indent+1)
-        print("    "*indent + "}")
-        
-class Expression:
-    def __init__(self, expression):
-        self.expression = expression
-        
-class Assign:
-    def __init__(self, name, value):
-        self.name = name
-        self.value = value
-    
-    def print(self, indent=0):
-        print("    "*indent + f"<Assign: {self.name} = {self.value}>")
-            
-        
-class Let:
-    def __init__(self, vtype, name, initial):
-        self.vtype = vtype
-        self.name = name
-        self.initial = initial
-        
-    def print(self, indent=0):
-        print("    "*indent + f"<Variable: let {self.vtype.lexeme} {self.name.lexeme} = {self.initial}>")
-        
-class Variable:
-    def __init__(self, name):
-        self.name = name
-        
-    def print(self, indent=0):
-        print(self.name)
-    
-    def __repr__(self):
-        return f"<Variable: {self.name}>"
-        
-class Literal:
-    def __init__(self, value):
-        self.value = value
-    
-    def __repr__(self):
-        return f"<Literal: {self.value}>"
-
-class If:
-    def __init__(self, condition, then, otherwise):
-        self.condition = condition
-        self.then = then
-        self.otherwise = otherwise
-        
-    def print(self, indent=0):
-        print("    "*indent + f"<If {self.condition}>")
-        self.then.print(indent+1)
-        if not self.otherwise is None:
-            print("    "*indent + f"Otherwise:")
-            self.otherwise.print(indent+1)
-            
-class Call:
-    def __init__(self, callee, paren, args):
-        self.callee = callee
-        self.paren = paren
-        self.args = args
-        
-    def print(self, indent=0):
-        print("    "*indent, self)
-    
-    def __repr__(self):
-        return f"<Call: func {self.callee}, args {self.args}>"
-    
-class Return:
-    def __init__(self, value):
-        self.value = value
-
-    def print(self, indent=0):
-        print("    "*indent, f"<Return: {self.value}>")
-        
 class ASTParser:
     def __init__(self, tokens):
         self.tokens = tokens
@@ -175,9 +83,9 @@ class ASTParser:
         return Block(statements)
     
     def if_statement(self):
-        self.consume(TokenType.LEFT_BRACKET)
+        self.consume(TokenType.LEFT_BRACKET, "Expected '(' after if")
         condition = self.expression()
-        self.consume(TokenType.RIGHT_BRACKET)
+        self.consume(TokenType.RIGHT_BRACKET, "Expected ')' after if condition")
         
         then = self.statement()
         if self.match(TokenType.ELSE):
@@ -195,12 +103,23 @@ class ASTParser:
         return self.assignment()
     
     def assignment(self):
-        expr = self.call()
+        expr = self.equality()
         if self.match(TokenType.EQUAL):
             value = self.assignment()
             if (expr, Variable):
                 return Assign(expr.name, value)
         return expr
+    
+    def equality(self):
+        expr = self.call()
+        
+        while self.match(TokenType.EQUAL_EQUAL, TokenType.NOT_EQUAL):
+            operator = self.previous()
+            right = self.call()
+            expr = Binary(expr, operator, right)
+        
+        return expr
+        
     
     def call(self):
         expr = self.primary()
