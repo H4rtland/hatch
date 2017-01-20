@@ -148,6 +148,8 @@ class ASTParser:
             arg_type = self.consume(TokenType.IDENTIFIER, f"Expected type for arg {arg_num}")
             arg_name = self.consume(TokenType.IDENTIFIER, f"Expected name for arg {arg_num}")
             args.append((arg_type, arg_name))
+            if self.check(TokenType.RIGHT_BRACKET):
+                break
             self.consume(TokenType.COMMA, "Comma expected in function args after arg{arg_num}")
             arg_num += 1
         

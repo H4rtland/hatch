@@ -1,4 +1,4 @@
-function void main() {
+function void main(int number) {
     let int x = get_num();
     let string greeting = "hello, world!";
     if (true) {
