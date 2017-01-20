@@ -91,11 +91,12 @@ class Tokenizer:
         return self.position >= len(self.hatch_source)
     
     def peek_for(self, character):
-        if self.at_end:
+        if self.at_end():
             return False
         if not self.peek(1) == character:
             return False
         self.next()
+        return True
     
     def peek(self, depth):
         return self.hatch_source[self.position+depth-1]
