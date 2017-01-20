@@ -111,15 +111,48 @@ class ASTParser:
         return expr
     
     def equality(self):
-        expr = self.call()
+        expr = self.comparison()
         
         while self.match(TokenType.EQUAL_EQUAL, TokenType.NOT_EQUAL):
             operator = self.previous()
-            right = self.call()
+            right = self.comparison()
             expr = Binary(expr, operator, right)
         
         return expr
-        
+    
+    def comparison(self):
+        expr = self.term()
+        while self.match(TokenType.GREATER_EQUAL, TokenType.GREATER, TokenType.LESS, TokenType.LESS_EQUAL):
+            operator = self.previous()
+            right = self.term()
+            expr = Binary(expr, operator, right)
+        return expr
+    
+    
+    def term(self):
+        expr = self.factor()
+        while self.match(TokenType.PLUS, TokenType.MINUS):
+            operator = self.previous()
+            right = self.factor()
+            expr = Binary(expr, operator, right)
+        return expr
+    
+    def factor(self):
+        expr = self.unary()
+        while self.match(TokenType.STAR, TokenType.SLASH):
+            operator = self.previous()
+            right = self.unary()
+            expr = Binary(expr, operator, right)
+        return expr
+    
+    
+    def unary(self):
+        if self.match(TokenType.MINUS):
+            operator = self.previous()
+            right = self.unary()
+            expr = Binary(operator, right)
+        return self.call()
+    
     
     def call(self):
         expr = self.primary()

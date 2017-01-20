@@ -5,8 +5,9 @@ function int get_num() {
 function void main(int number) {
     let int x = get_num();
     let string greeting = "hello, world!";
-    if (x == 4) {
+    if (x+8 > 10) {
         x = 2;
+        x = x + 4;
     } else {
         x = 3;
     }

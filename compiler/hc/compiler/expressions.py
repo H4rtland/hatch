@@ -99,3 +99,11 @@ class Binary:
     
     def __repr__(self):
         return f"<Binary: {self.left} {self.operator.lexeme} {self.right}>"
+    
+class Unary:
+    def __init__(self, operator, right):
+        self.operator = operator
+        self.right = right
+        
+    def __repr__(self):
+        return f"<Unary: {self.operator.lexeme} {self.right}>"
