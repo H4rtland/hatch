@@ -38,6 +38,8 @@ class TokenType(Enum):
     RETURN = auto()
     TRUE = auto()
     FALSE = auto()
+    LET = auto()
+    FUNCTION = auto()
     
     
 class Token:
@@ -74,6 +76,8 @@ KEYWORDS = {
     "return": TokenType.RETURN,
     "true": TokenType.TRUE,
     "false": TokenType.FALSE,
+    "let": TokenType.LET,
+    "function": TokenType.FUNCTION,
 }
     
 class Tokenizer:
@@ -176,7 +180,7 @@ class Tokenizer:
         return self.add_token(TokenType.NUMBER, number)
     
     def read_identifier(self):
-        while self.peek(1).isalnum():
+        while self.peek(1).isalnum() or self.peek(1) == "_":
             self.next()
         name = self.hatch_source[self.start:self.position]
         if name in KEYWORDS:
