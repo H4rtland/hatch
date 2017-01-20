@@ -30,6 +30,14 @@ class TokenType(Enum):
     PLUS = auto()
     STAR = auto()
     SLASH = auto()
+    IDENTIFIER = auto()
+    IF = auto()
+    ELSE = auto()
+    WHILE = auto()
+    FOR = auto()
+    RETURN = auto()
+    TRUE = auto()
+    FALSE = auto()
     
     
 class Token:
@@ -44,17 +52,28 @@ class Token:
         return f"<Token: {self.token_type}, {self.lexeme}, {self.literal} (line {self.line})>"
     
 SINGLE_CHARS = {
-    "(":TokenType.LEFT_BRACKET,
-    ")":TokenType.RIGHT_BRACKET,
-    "{":TokenType.LEFT_BRACE,
-    "}":TokenType.RIGHT_BRACE,
-    "[":TokenType.LEFT_SQUARE,
-    "]":TokenType.RIGHT_SQUARE,
-    ",":TokenType.COMMA,
-    ".":TokenType.DOT,
-    "-":TokenType.MINUS,
-    "+":TokenType.PLUS,
-    "*":TokenType.STAR,
+    "(": TokenType.LEFT_BRACKET,
+    ")": TokenType.RIGHT_BRACKET,
+    "{": TokenType.LEFT_BRACE,
+    "}": TokenType.RIGHT_BRACE,
+    "[": TokenType.LEFT_SQUARE,
+    "]": TokenType.RIGHT_SQUARE,
+    ",": TokenType.COMMA,
+    ".": TokenType.DOT,
+    "-": TokenType.MINUS,
+    "+": TokenType.PLUS,
+    "*": TokenType.STAR,
+    ";": TokenType.SEMICOLON,
+}
+
+KEYWORDS = {
+    "if": TokenType.IF,
+    "else": TokenType.ELSE,
+    "while": TokenType.WHILE,
+    "for": TokenType.FOR,
+    "return": TokenType.RETURN,
+    "true": TokenType.TRUE,
+    "false": TokenType.FALSE,
 }
     
 class Tokenizer:
@@ -120,7 +139,48 @@ class Tokenizer:
             self.line += 1
             return
         
-        print("Unhandled token")
+        if next_char == '"':
+            # string literal
+            return self.read_string()
+        
+        if next_char.isdigit():
+            return self.read_number()
+        
+        if next_char.isalpha():
+            return self.read_identifier()
+        
+        print(f"Unhandled token {self.hatch_source[self.start:self.position]}")
+        
+    def read_string(self):
+        while not self.at_end() and self.peek(1) != '"':
+            if self.peek(1) == "\n":
+                self.line += 1
+            self.next()
+        
+        if self.at_end():
+            print("Unterminated string")
+            return
+        
+        # eat closing quote
+        self.next()
+        
+        string = self.hatch_source[self.start+1:self.position-1]
+        
+        return self.add_token(TokenType.STRING, string)
+    
+    def read_number(self):
+        while self.peek(1).isdigit():
+            self.next()
+        number = int(self.hatch_source[self.start:self.position])
+        return self.add_token(TokenType.NUMBER, number)
+    
+    def read_identifier(self):
+        while self.peek(1).isalnum():
+            self.next()
+        name = self.hatch_source[self.start:self.position]
+        if name in KEYWORDS:
+            return self.add_token(KEYWORDS[name])
+        return self.add_token(TokenType.IDENTIFIER)
     
     def tokenize(self):
         while self.position < len(self.hatch_source):
