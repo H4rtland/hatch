@@ -85,7 +85,13 @@ class Call:
     
     def __repr__(self):
         return f"<Call: func {self.callee}, args {self.args}>"
+    
+class Return:
+    def __init__(self, value):
+        self.value = value
 
+    def print(self, indent=0):
+        print("    "*indent, f"<Return: {self.value}>")
         
 class ASTParser:
     def __init__(self, tokens):
@@ -127,6 +133,8 @@ class ASTParser:
             return self.function()
         if self.match(TokenType.LET):
             return self.let()
+        if self.match(TokenType.RETURN):
+            return self.return_statement()
         
         return self.statement()
     
@@ -235,4 +243,10 @@ class ASTParser:
         initial = self.expression()
         self.consume(TokenType.SEMICOLON, "Expected semicolon following let statement")
         return Let(vtype, name, initial)
-        
+    
+    def return_statement(self):
+        value = None
+        if not self.check(TokenType.SEMICOLON):
+            value = self.expression()
+        self.consume(TokenType.SEMICOLON, "Expected semicolon after return statement")
+        return Return(value)

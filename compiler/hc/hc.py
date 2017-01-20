@@ -4,11 +4,13 @@ from compiler.ast import ASTParser
 if __name__ == "__main__":
     with open("testfile.hatch", "r") as test_file:
         source = test_file.read()
+    print("Source:\n")
     print(source)
+    print("-----------------------------------------\nTree:\n")
     tokenizer = Tokenizer(source)
     tokens = tokenizer.tokenize()
-    for token in tokens:
-        print(token)
+    #for token in tokens:
+    #    print(token)
     
     ast = ASTParser(tokens)
     tree = ast.parse()
