@@ -25,5 +25,8 @@ if __name__ == "__main__":
     with open("testfile.hb", "wb") as output_file:
         output_file.write(bytes(instructions))
         
+    with open("testfile.hasm", "w") as output_file:
+        output_file.writelines(map(lambda x: str(bin(x)[2:]).zfill(8) + "\n", instructions))
+        
     print("Compilation complete")
     
