@@ -79,7 +79,7 @@ class Call:
         self.args = args
         
     def print(self, indent=0):
-        print("    "*indent, self)
+        print("    "*indent + str(self))
     
     def __repr__(self):
         return f"<Call: func {self.callee}, args {self.args}>"
