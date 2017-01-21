@@ -1,19 +1,7 @@
-function int get_num() {
-    return 4;
-}
-
-function void main(int number) {
-    let int x = get_num();
-    let string greeting = "hello, world!";
-    if (x+8 > 10) {
-        x = 2;
-        x = x + 4 / 0 + 1;
-    } else {
-        x = 3;
-    }
-    add_one(x);
-
-    {
-        let int a = 0;
-    }
+function void main() {
+    let int x = 1;
+    x = 16;
+    let int y = 5;
+    y = x + y;
+    print(x, y);
 }
