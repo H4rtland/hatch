@@ -40,7 +40,7 @@ class Let:
         self.initial = initial
         
     def print(self, indent=0):
-        print("    "*indent + f"<Variable: let {self.vtype.lexeme} {self.name.lexeme} = {self.initial}>")
+        print("    "*indent + f"<Let: {self.vtype.lexeme} {self.name.lexeme} = {self.initial}>")
         
 class Variable:
     def __init__(self, name):
