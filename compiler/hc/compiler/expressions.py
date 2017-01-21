@@ -16,9 +16,9 @@ class Function:
         self.body = body
     
     def print(self, indent=0):
-        print("    "*indent + f"function {self.rtype.lexeme} {self.name.lexeme} ({self.args}) {{")
+        print("    "*indent + f"<Function: {self.rtype.lexeme} {self.name.lexeme} ({self.args})>")
         self.body.print(indent+1)
-        print("    "*indent + "}")
+        #print("    "*indent + "}")
         
 class Expression:
     def __init__(self, expression):
@@ -69,7 +69,7 @@ class If:
         print("    "*indent + f"<If {self.condition}>")
         self.then.print(indent+1)
         if not self.otherwise is None:
-            print("    "*indent + f"Otherwise:")
+            print("    "*indent + "<Otherwise>")
             self.otherwise.print(indent+1)
             
 class Call:
