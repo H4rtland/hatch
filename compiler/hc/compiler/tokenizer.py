@@ -84,7 +84,7 @@ class Tokenizer:
     def __init__(self, hatch_source):
         self.hatch_source = hatch_source
         self.position = 0
-        self.line = 0
+        self.line = 1
         self.tokens = []
     
     def next(self):

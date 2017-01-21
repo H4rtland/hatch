@@ -142,6 +142,10 @@ class ASTParser:
         while self.match(TokenType.STAR, TokenType.SLASH):
             operator = self.previous()
             right = self.unary()
+            if operator.token_type == TokenType.SLASH:
+                if isinstance(right, Literal):
+                    if right.value == 0:
+                        raise Exception(f"Division by zero on line {self.tokens[self.position].line}")
             expr = Binary(expr, operator, right)
         return expr
     

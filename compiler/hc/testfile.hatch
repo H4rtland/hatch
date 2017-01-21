@@ -7,9 +7,13 @@ function void main(int number) {
     let string greeting = "hello, world!";
     if (x+8 > 10) {
         x = 2;
-        x = x + 4;
+        x = x + 4 / 0 + 1;
     } else {
         x = 3;
     }
     add_one(x);
+
+    {
+        let int a = 0;
+    }
 }
