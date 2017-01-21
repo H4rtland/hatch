@@ -4,7 +4,7 @@
 
 8 bit language, compiler, virtual machine.
 
-### Instruction set
+## Instruction set
 
 The instruction set can address 256 bytes of memory, as each "single" instruction is stored in a pair of memory bytes, the first being the instruction and the second the data.
 The virtual machine's instruction register advances two bytes in memory in each clock cycle. 
@@ -18,7 +18,7 @@ becomes
 
 The highest bit in the instruction byte determines whether the following data byte refers to a location in memory or a literal value.
 
-### Hatch
+## Hatch
 
 Hatch syntax is similar to any generic C style language, and functions and variables are declared by _function_ and _let_ statements.
 
@@ -38,7 +38,7 @@ The first hatch program that was successfully compiled and run was
         print(x, y);
     }
     
-##### Namespaces
+#### Namespaces
 
 Because the target platform, the virtual machine, has a fixed amount of RAM and only runs a single program at a time, the option exists to manage memory at compile time.
 
