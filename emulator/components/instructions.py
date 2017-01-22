@@ -1,4 +1,4 @@
-INSTRUCTION_DEBUG = True
+INSTRUCTION_DEBUG = False
 
 def debug(function):
     def wrapper(*args, **kwargs):
@@ -111,9 +111,20 @@ def CMP(emulator, mem_flag, data):
 def JE(emulator, mem_flag, data):
     if emulator.comparisons["JE"]:
         emulator.instruction_register.load(data)
-        
+
+@debug
 def NEG(emulator, mem_flag, data):
     emulator.reg_a -= emulator.reg_b
+
+@debug_addr
+def CALL(emulator, mem_flag, data):
+    emulator.call_stack.append(emulator.instruction_register.value)
+    emulator.instruction_register.load(data)
+
+@debug_addr
+def RET(emulator, mem_flag, data):
+    emulator.instruction_register.load(emulator.call_stack.pop())
+    emulator.reg_func.load(data)
         
 instructions = {
     0b00000: NOP,
@@ -133,6 +144,8 @@ instructions = {
     0b01110: CMP,
     0b01111: JE,
     0b10000: NEG,
+    0b10001: CALL,
+    0b10010: RET,
 }
 
 class InstructionException(Exception):

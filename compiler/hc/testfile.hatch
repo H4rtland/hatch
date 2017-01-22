@@ -1,7 +1,12 @@
+function int random_integer() {
+    // guaranteed random. chosen by fair dice roll.
+    return 4;
+}
+
 function void main() {
     let int x = 1;
     x = 16;
     let int y = 5;
-    y = x + y + 2 - 3;
+    y = x + y + random_integer();
     print(x, y);
 }

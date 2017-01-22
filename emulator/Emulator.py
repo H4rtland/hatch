@@ -11,15 +11,19 @@ class OctoEngine:
         self.comparisons = {"JE":False, "JG":False, "JL":False}
         
         self.memory = Memory()
+        self.call_stack = []
         
         self.reg_a = Register("A")
         self.reg_b = Register("B")
         self.reg_counter = Register("COUNTER")
         self.instruction_register = Register("INST")
+        self.reg_func = Register("FUNC")
         
         self.memory.reserve(255, self.reg_a)
         self.memory.reserve(254, self.reg_b)
         self.memory.reserve(253, self.reg_counter)
+        self.memory.reserve(252, self.instruction_register)
+        self.memory.reserve(251, self.reg_func)
 
     def load(self, bytestream):
         for index, byte in enumerate(bytestream):
@@ -34,6 +38,7 @@ class OctoEngine:
         data = self.memory[self.instruction_register]
         self.instruction_register += 1
         instructions[instruction](self, mem_flag, data)
+        # print(f"Registers: A:{self.reg_a.value}, B:{self.reg_b.value}, F:{self.reg_func.value}")
         
     def run(self):
         while not self.halted:
