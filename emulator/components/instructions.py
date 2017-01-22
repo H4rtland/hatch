@@ -112,6 +112,9 @@ def JE(emulator, mem_flag, data):
     if emulator.comparisons["JE"]:
         emulator.instruction_register.load(data)
         
+def NEG(emulator, mem_flag, data):
+    emulator.reg_a -= emulator.reg_b
+        
 instructions = {
     0b00000: NOP,
     0b00001: LDA,
@@ -129,6 +132,7 @@ instructions = {
     0b01101: MOV,
     0b01110: CMP,
     0b01111: JE,
+    0b10000: NEG,
 }
 
 class InstructionException(Exception):

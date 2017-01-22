@@ -96,6 +96,26 @@ class Assembler:
                 self.instructions[index] = inst.addr + data_start
         print(self.instructions)
         return self.instructions
+    
+    
+    def parse_binary(self, namespace, binary):
+        if isinstance(binary.left, Literal):
+            self.add_instruction(0b00001, binary.left.value) # LDA value
+        elif isinstance(binary.left, Variable):
+            self.add_instruction(0b00001, MemoryAddress(namespace.get_namespace()[binary.left.name]), True) # LDA [left_name]
+        elif isinstance(binary.left, Binary):
+            self.parse_binary(namespace, binary.left)
+        
+        if isinstance(binary.right, Literal):
+            self.add_instruction(0b00010, binary.right.value) # LDB value
+        elif isinstance(binary.right, Variable):
+            self.add_instruction(0b00010, MemoryAddress(namespace.get_namespace()[binary.right.name]), True) # LDB [right_name]
+        
+        if binary.operator.token_type ==  TokenType.PLUS:
+            self.add_instruction(0b00101, 0)
+        
+        if binary.operator.token_type == TokenType.MINUS:
+            self.add_instruction(0b10000, 0)
                 
         
     def parse(self, block, namespace):
@@ -123,21 +143,8 @@ class Assembler:
                     self.add_instruction(0b00001, value) # LDA value
                     self.add_instruction(0b01001, MemoryAddress(namespace.get_namespace()[statement.name])) # STA [var_name]
                 if isinstance(statement.value, Binary):
-                    if statement.value.operator.token_type ==  TokenType.PLUS:
-                        if isinstance(statement.value.left, (Literal, Variable)) and isinstance(statement.value.right, (Literal, Variable)):
-                            if isinstance(statement.value.left, Literal):
-                                self.add_instruction(0b00001, statement.value.left.value) # LDA value
-                            else:
-                                self.add_instruction(0b00001, MemoryAddress(namespace.get_namespace()[statement.value.left.name]), True) # LDA [left_name]
-                                
-                            if isinstance(statement.value.left, Literal):
-                                self.add_instruction(0b00010, statement.value.right.value) # LDB value
-                            else:
-                                self.add_instruction(0b00010, MemoryAddress(namespace.get_namespace()[statement.value.right.name]), True) # LDB [right_name]
-                            
-                            self.add_instruction(0b00101, 0) # ADD
-                            self.add_instruction(0b01001, MemoryAddress(namespace.get_namespace()[statement.name])) # STA [var_name]
-                            print("Done binary add")
+                    self.parse_binary(namespace, statement.value)
+                    self.add_instruction(0b01001, MemoryAddress(namespace.get_namespace()[statement.name])) # STA [var_name]
                         
             
             if isinstance(statement, Call):

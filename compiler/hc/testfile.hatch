@@ -2,6 +2,6 @@ function void main() {
     let int x = 1;
     x = 16;
     let int y = 5;
-    y = x + y;
+    y = x + y + 2 - 3;
     print(x, y);
 }

@@ -38,9 +38,8 @@ class Register:
         return self.__add__(-register)
 
     def __neg__(self):
-        reg = Register()
-        reg.load(-self.stored_value)
-        return reg
+        self.load((-self.stored_value & 0b11111111) - 1)
+        return self
     
     def __and__(self, other):
         return self.value & other
