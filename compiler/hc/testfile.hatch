@@ -1,3 +1,7 @@
+function int plus_one(int n) {
+    return n + 1;
+}
+
 function int get_4() {
     return 4;
 }
@@ -11,7 +15,9 @@ function int random_integer() {
 function void main() {
     let int x = 1;
     x = 16;
-    let int y = 5;
+    let int y = 4;
+    y = plus_one(5);
+    print(y);
     y = x + y + random_integer();
     print(x, y);
 }

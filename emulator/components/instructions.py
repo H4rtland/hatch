@@ -136,8 +136,6 @@ def NEG(emulator, mem_flag, stack_flag, data):
 def CALL(emulator, mem_flag, stack_flag, data):
     emulator.call_stack.append(emulator.instruction_register.value)
     emulator.instruction_register.load(data)
-    emulator.stack.append(emulator.reg_a.value)
-    emulator.stack.append(emulator.reg_b.value)
 
 @debug_addr
 def RET(emulator, mem_flag, stack_flag, data):
@@ -155,6 +153,11 @@ def PUSH(emulator, mem_flag, stack_flag, data):
 @debug_addr_data
 def POP(emulator, mem_flag, stack_flag, data):
     emulator.stack = emulator.stack[:-data]
+
+@debug
+def SAVE(emulator, mem_flag, stack_flag, data):
+    emulator.stack.append(emulator.reg_a.value)
+    emulator.stack.append(emulator.reg_b.value)
         
 instructions = {
     0b00000: NOP,
@@ -178,6 +181,7 @@ instructions = {
     0b10010: RET,
     0b10011: PUSH,
     0b10100: POP,
+    0b10101: SAVE,
 }
 
 class InstructionException(Exception):

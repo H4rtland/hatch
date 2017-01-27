@@ -50,7 +50,10 @@ class Assembler:
         self.add_instruction(Instruction.HLT, 0) # HLT
         for function in self.non_main_functions:
             self.function_addresses[function.name.lexeme] = len(self.instructions)
-            self.parse(function.body, Namespace(self.globals, self.memory))
+            namespace = Namespace(self.globals, self.memory)
+            for arg in function.args:
+                namespace.let(arg[1].lexeme, 1, arg[0].lexeme)
+            self.parse(function.body, namespace)
             self.function_return_addresses[function.name.lexeme] = len(self.instructions)-1
         
         data_start = len(self.instructions)
@@ -94,6 +97,14 @@ class Assembler:
             self.add_instruction(Instruction.NEG, 0) # NEG
             
     def parse_call(self, namespace, func, args):
+        # Save register state to restore after function return
+        self.add_instruction(Instruction.SAVE, 0)
+        # Add parameters to stack
+        for arg in args:
+            if isinstance(arg, Literal):
+                self.add_instruction(Instruction.PUSH, 0)
+                self.add_instruction(Instruction.LDA, arg.value) # LDA value
+                self.add_instruction(Instruction.STA, 1, stack_flag=True)
         self.add_instruction(Instruction.CALL, FunctionAddress(func)) # CALL function_start
         
                 
@@ -135,6 +146,10 @@ class Assembler:
                 if isinstance(statement.value, Binary):
                     self.parse_binary(namespace, statement.value)
                     self.add_instruction(Instruction.STA, self.memory.id_on_stack(namespace.get_namespace()[statement.name]), stack_flag=True) # STA [var_name]
+                if isinstance(statement.value, Call):
+                    self.parse_call(namespace, statement.value.callee, statement.value.args)
+                    self.add_instruction(Instruction.MOV, mov(Register.AX, Register.FX)) # MOV AX <- FX
+                    self.add_instruction(Instruction.STA, self.memory.id_on_stack(namespace.get_namespace()[statement.name]), stack_flag=True) # STA func_return
                         
             
             if isinstance(statement, Call):
@@ -154,10 +169,17 @@ class Assembler:
                     self.add_instruction(Instruction.RET, statement.value.value) # RET value
                 if isinstance(statement.value, Variable):
                     self.add_instruction(Instruction.LDA, self.memory.id_on_stack(namespace.get_namespace()[statement.value.name]), stack_flag=True)
-                    self.add_instruction(Instruction.MOV, mov(Register.FX, Register.BX)) # MOV FX <- AX
+                    self.add_instruction(Instruction.MOV, mov(Register.FX, Register.AX)) # MOV FX <- AX
                     if len(namespace.locals) > 0:
                         self.add_instruction(Instruction.POP, len(namespace.locals))
-                    self.add_instruction(Instruction.RET, 0, stack_flag=True) # RET variable
+                    self.add_instruction(Instruction.RET, 0, stack_flag=True) # RET none
+                if isinstance(statement.value, Binary):
+                    self.parse_binary(namespace, statement.value)
+                    self.add_instruction(Instruction.MOV, mov(Register.FX, Register.AX)) # MOV FX <- AX
+                    if len(namespace.locals) > 0:
+                        self.add_instruction(Instruction.POP, len(namespace.locals))
+                    self.add_instruction(Instruction.RET, 0, stack_flag=True) # RET none
+                    
                     
                     
          
