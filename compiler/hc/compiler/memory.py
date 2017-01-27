@@ -1,3 +1,5 @@
+import uuid
+
 class DataAddress:
     def __init__(self, addr):
         self.addr = addr
@@ -25,6 +27,10 @@ class MemoryModel:
     def __init__(self):
         self.memory = {}
         self.memory_size = 256
+        self.stack = []
+        
+    def id_on_stack(self, uid):
+        return len(self.stack)-self.stack.index(uid)
         
     def space_is_free(self, at, length):
         for addr, block in self.memory.items():
@@ -54,12 +60,15 @@ class Namespace:
         self.parent = parent
         self.memory = memory
         self.locals = {}
+        self.stack_variables = 0
         
     def let(self, name, length, var_type):
         #print(f"Allocating variable {name} in namespace")
-        addr = self.memory.allocate(length, var_type)
-        self.locals[name] = addr
-        return addr
+        #addr = self.memory.allocate(length, var_type)
+        self.locals[name] = uuid.uuid4().hex
+        self.stack_variables += 1
+        self.memory.stack.append(self.locals[name])
+        return self.locals[name]
     
     def get_namespace(self):
         if self.parent is None:

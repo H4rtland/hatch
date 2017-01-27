@@ -11,7 +11,9 @@ class OctoEngine:
         self.comparisons = {"JE":False, "JG":False, "JL":False}
         
         self.memory = Memory()
+        self.stack = []
         self.call_stack = []
+        
         
         self.reg_a = Register("A")
         self.reg_b = Register("B")
@@ -30,15 +32,19 @@ class OctoEngine:
             self.memory[index] = byte
         
     def instruction_cycle(self):
-        instruction = self.memory[self.instruction_register.value] & 0b0111_1111
+        instruction = self.memory[self.instruction_register.value] & 0b0011_1111
         if not instruction in instructions:
             raise InstructionException(f"Undefined instruction: {instruction} at memory address {self.instruction_register.value}")
         mem_flag = (self.memory[self.instruction_register.value] & 0b1000_0000) >> 7
+        stack_flag = (self.memory[self.instruction_register.value] & 0b0100_0000) >> 6
         self.instruction_register += 1
         data = self.memory[self.instruction_register]
         self.instruction_register += 1
-        instructions[instruction](self, mem_flag, data)
-        # print(f"Registers: A:{self.reg_a.value}, B:{self.reg_b.value}, F:{self.reg_func.value}")
+        instructions[instruction](self, mem_flag, stack_flag, data)
+        """print(f"Registers: A:{self.reg_a.value}, B:{self.reg_b.value}, F:{self.reg_func.value}")
+        print(f"Stack: {self.stack}")
+        print(f"Mem: {self.memory.memory[200:]}")
+        print()"""
         
     def run(self):
         while not self.halted:

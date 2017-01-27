@@ -5,7 +5,7 @@ class MemoryAccessException(Exception):
 
 class Memory:
     def __init__(self):
-        self.memory = [0,] * 256
+        self.memory = [0 for i in range(0, 256)]
         self.reserved = {}
         
     def reserve(self, addr, register):

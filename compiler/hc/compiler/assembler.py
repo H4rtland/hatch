@@ -5,6 +5,8 @@ from compiler.tokenizer import TokenType
 from compiler.memory import MemoryModel, Namespace, FunctionAddress, DataAddress
 from compiler.instructions import Instruction, Register, mov
 
+import uuid
+
         
             
 class Assembler:
@@ -30,12 +32,15 @@ class Assembler:
             raise Exception("No main function found")
         
         
-    def add_instruction(self, inst, data, mem_flag=False):
+    def add_instruction(self, inst, data, mem_flag=False, stack_flag=False):
         if isinstance(inst, Enum):
             inst = inst.value
         if mem_flag:
             # set memory reference bit
             inst = 0b1000_0000 | inst
+        if stack_flag:
+            # set stack lookup bit
+            inst = 0b0100_0000 | inst
         self.instructions += [inst, data]
         return len(self.instructions) - 2
         
@@ -62,7 +67,8 @@ class Assembler:
         if isinstance(binary.left, Literal):
             self.add_instruction(Instruction.LDA, binary.left.value) # LDA value
         elif isinstance(binary.left, Variable):
-            self.add_instruction(Instruction.LDA, DataAddress(namespace.get_namespace()[binary.left.name]), True) # LDA [left_name]
+            # self.add_instruction(Instruction.LDA, DataAddress(namespace.get_namespace()[binary.left.name]), True) # LDA [left_name]
+            self.add_instruction(Instruction.LDA, self.memory.id_on_stack(namespace.get_namespace()[binary.left.name]), stack_flag=True) # LDA [left_name]
         elif isinstance(binary.left, Call):
             self.parse_call(namespace, binary.left.callee, binary.left.args)
             # move function return value into AX
@@ -73,7 +79,8 @@ class Assembler:
         if isinstance(binary.right, Literal):
             self.add_instruction(Instruction.LDB, binary.right.value) # LDB value
         elif isinstance(binary.right, Variable):
-            self.add_instruction(Instruction.LDB, DataAddress(namespace.get_namespace()[binary.right.name]), True) # LDB [right_name]
+            # self.add_instruction(Instruction.LDB, DataAddress(namespace.get_namespace()[binary.right.name]), True) # LDB [right_name]
+            self.add_instruction(Instruction.LDB, self.memory.id_on_stack(namespace.get_namespace()[binary.right.name]), stack_flag=True) # LDB [right_name]
         elif isinstance(binary.right, Call):
             self.parse_call(namespace, binary.right.callee, binary.right.args)
             # move function return value into BX
@@ -97,11 +104,12 @@ class Assembler:
                 self.parse(statement, Namespace(namespace, self.memory))
             
             if isinstance(statement, Let):
-                addr = namespace.let(statement.name.lexeme, 1, statement.vtype.lexeme)
+                identifier = namespace.let(statement.name.lexeme, 1, statement.vtype.lexeme)
                 if isinstance(statement.initial, Literal):
                     value = statement.initial.value
+                    self.add_instruction(Instruction.PUSH, 0)
                     self.add_instruction(Instruction.LDA, value) # LDA value
-                    self.add_instruction(Instruction.STA, DataAddress(addr)) # STA [var_name]
+                    self.add_instruction(Instruction.STA, self.memory.id_on_stack(identifier), stack_flag=True) # STA [var_name]
             
             if isinstance(statement, If):
                 self.parse(statement.then, Namespace(namespace, self.memory))
@@ -113,10 +121,10 @@ class Assembler:
                 if isinstance(statement.value, Literal):
                     value = statement.value.value
                     self.add_instruction(Instruction.LDA, value) # LDA value
-                    self.add_instruction(Instruction.STA, DataAddress(namespace.get_namespace()[statement.name])) # STA [var_name]
+                    self.add_instruction(Instruction.STA, self.memory.id_on_stack(namespace.get_namespace()[statement.name]), stack_flag=True) # STA [var_name]
                 if isinstance(statement.value, Binary):
                     self.parse_binary(namespace, statement.value)
-                    self.add_instruction(Instruction.STA, DataAddress(namespace.get_namespace()[statement.name])) # STA [var_name]
+                    self.add_instruction(Instruction.STA, self.memory.id_on_stack(namespace.get_namespace()[statement.name]), stack_flag=True) # STA [var_name]
                         
             
             if isinstance(statement, Call):
@@ -126,7 +134,7 @@ class Assembler:
                     for arg in statement.args:
                         if not arg.name in namespace.get_namespace():
                             raise Exception(f"Call with uninitialised variable {arg.name}")
-                        self.add_instruction(Instruction.PRX, DataAddress(namespace.get_namespace()[arg.name]), True) # PRX var
+                        self.add_instruction(Instruction.PRX, self.memory.id_on_stack(namespace.get_namespace()[arg.name]), stack_flag=True) # PRX var
                         
             if isinstance(statement, Return):
                 if isinstance(statement.value, Literal):
@@ -138,19 +146,3 @@ class Assembler:
         # local variables are freed at the end of a block
         for name in namespace.locals:
             self.memory.free(namespace.locals[name])
-        
-        
-        
-if __name__ == "__main__":
-    memory = MemoryModel()
-    x = memory.allocate(1, int)
-    y = memory.allocate(2, int)
-    z = memory.allocate(5, int)
-    print(x, y, z)
-    memory.free(y)
-    
-    a = memory.allocate(6, int)
-    b = memory.allocate(1, int)
-    print(a, b)
-    
-    print(memory.memory)
