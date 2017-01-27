@@ -41,6 +41,7 @@ class OctoEngine:
         data = self.memory[self.instruction_register]
         self.instruction_register += 1
         instructions[instruction](self, mem_flag, stack_flag, data)
+        
         """print(f"Registers: A:{self.reg_a.value}, B:{self.reg_b.value}, F:{self.reg_func.value}")
         print(f"Stack: {self.stack}")
         print(f"Mem: {self.memory.memory[200:]}")

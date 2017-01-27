@@ -99,17 +99,27 @@ class Assembler:
                 
         
     def parse(self, block, namespace):
+        
+        already_popped = False
+        
         for statement in block.statements:
             if isinstance(statement, Block):
                 self.parse(statement, Namespace(namespace, self.memory))
             
             if isinstance(statement, Let):
-                identifier = namespace.let(statement.name.lexeme, 1, statement.vtype.lexeme)
+                
                 if isinstance(statement.initial, Literal):
+                    identifier = namespace.let(statement.name.lexeme, 1, statement.vtype.lexeme)
                     value = statement.initial.value
                     self.add_instruction(Instruction.PUSH, 0)
                     self.add_instruction(Instruction.LDA, value) # LDA value
-                    self.add_instruction(Instruction.STA, self.memory.id_on_stack(identifier), stack_flag=True) # STA [var_name]
+                    self.add_instruction(Instruction.STA, self.memory.id_on_stack(identifier), stack_flag=True) # STA var_name
+                if isinstance(statement.initial, Call):
+                    self.parse_call(namespace, statement.initial.callee, statement.initial.args)
+                    self.add_instruction(Instruction.MOV, mov(Register.AX, Register.FX)) # MOV AX <- FX
+                    identifier = namespace.let(statement.name.lexeme, 1, statement.vtype.lexeme)
+                    self.add_instruction(Instruction.PUSH, 0)
+                    self.add_instruction(Instruction.STA, self.memory.id_on_stack(identifier), stack_flag=True) # STA func_return
             
             if isinstance(statement, If):
                 self.parse(statement.then, Namespace(namespace, self.memory))
@@ -137,12 +147,24 @@ class Assembler:
                         self.add_instruction(Instruction.PRX, self.memory.id_on_stack(namespace.get_namespace()[arg.name]), stack_flag=True) # PRX var
                         
             if isinstance(statement, Return):
+                already_popped = True
                 if isinstance(statement.value, Literal):
+                    if len(namespace.locals) > 0:
+                        self.add_instruction(Instruction.POP, len(namespace.locals))
                     self.add_instruction(Instruction.RET, statement.value.value) # RET value
+                if isinstance(statement.value, Variable):
+                    self.add_instruction(Instruction.LDA, self.memory.id_on_stack(namespace.get_namespace()[statement.value.name]), stack_flag=True)
+                    self.add_instruction(Instruction.MOV, mov(Register.FX, Register.BX)) # MOV FX <- AX
+                    if len(namespace.locals) > 0:
+                        self.add_instruction(Instruction.POP, len(namespace.locals))
+                    self.add_instruction(Instruction.RET, 0, stack_flag=True) # RET variable
                     
                     
          
         # print(namespace.get_namespace(), self.memory.memory)
         # local variables are freed at the end of a block
-        for name in namespace.locals:
-            self.memory.free(namespace.locals[name])
+        if not already_popped:
+            self.add_instruction(Instruction.POP, len(namespace.locals))
+            print("Popping local namespace", len(namespace.locals))
+        #for name in namespace.locals:
+        #    self.memory.free(namespace.locals[name])

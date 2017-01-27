@@ -136,22 +136,25 @@ def NEG(emulator, mem_flag, stack_flag, data):
 def CALL(emulator, mem_flag, stack_flag, data):
     emulator.call_stack.append(emulator.instruction_register.value)
     emulator.instruction_register.load(data)
+    emulator.stack.append(emulator.reg_a.value)
+    emulator.stack.append(emulator.reg_b.value)
 
 @debug_addr
 def RET(emulator, mem_flag, stack_flag, data):
     emulator.instruction_register.load(emulator.call_stack.pop())
-    emulator.reg_func.load(data)
-
-next_mem = 200
+    if not stack_flag:
+        emulator.reg_func.load(data)
+    emulator.reg_b.load(emulator.stack[-1])
+    emulator.reg_a.load(emulator.stack[-2])
+    emulator.stack = emulator.stack[:-2]
 
 @debug_addr
 def PUSH(emulator, mem_flag, stack_flag, data):
-    global next_mem
-    emulator.stack.append(next_mem)
-    next_mem += 1
+    emulator.stack.append(200+len(emulator.stack))
 
+@debug_addr_data
 def POP(emulator, mem_flag, stack_flag, data):
-    emulator.stack = emulator.stack[-data]
+    emulator.stack = emulator.stack[:-data]
         
 instructions = {
     0b00000: NOP,

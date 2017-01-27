@@ -1,6 +1,11 @@
+function int get_4() {
+    return 4;
+}
+
 function int random_integer() {
     // guaranteed random. chosen by fair dice roll.
-    return 4;
+    let int return_value = get_4();
+    return return_value;
 }
 
 function void main() {

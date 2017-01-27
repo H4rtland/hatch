@@ -89,7 +89,7 @@ class Return:
         self.value = value
 
     def print(self, indent=0):
-        print("    "*indent, f"<Return: {self.value}>")
+        print("    "*indent + f"<Return: {self.value}>")
         
 class Binary:
     def __init__(self, left, operator, right):
