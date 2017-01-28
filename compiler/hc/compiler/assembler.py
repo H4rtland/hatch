@@ -99,12 +99,18 @@ class Assembler:
     def parse_call(self, namespace, func, args):
         # Save register state to restore after function return
         self.add_instruction(Instruction.SAVE, 0)
+        extra_stack_vars = 2
         # Add parameters to stack
         for arg in args:
             if isinstance(arg, Literal):
                 self.add_instruction(Instruction.PUSH, 0)
                 self.add_instruction(Instruction.LDA, arg.value) # LDA value
                 self.add_instruction(Instruction.STA, 1, stack_flag=True)
+            if isinstance(arg, Variable):
+                self.add_instruction(Instruction.LDA, self.memory.id_on_stack(namespace.get_namespace()[arg.name])+extra_stack_vars, stack_flag=True)
+                self.add_instruction(Instruction.PUSH, 0)
+                self.add_instruction(Instruction.STA, 1, stack_flag=True)
+            extra_stack_vars += 1
         self.add_instruction(Instruction.CALL, FunctionAddress(func)) # CALL function_start
         
                 

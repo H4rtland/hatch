@@ -2,6 +2,11 @@ function int plus_one(int n) {
     return n + 1;
 }
 
+function int sum(int a, int b) {
+    print(a, b);
+    return a + b;
+}
+
 function int get_4() {
     return 4;
 }
@@ -13,11 +18,11 @@ function int random_integer() {
 }
 
 function void main() {
-    let int x = 1;
+    let int x = 2;
     x = 16;
     let int y = 4;
-    y = plus_one(5);
+    y = sum(x, y);
     print(y);
-    y = x + y + random_integer();
+    y = 80 + random_integer();
     print(x, y);
 }
