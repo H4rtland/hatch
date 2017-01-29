@@ -1,4 +1,4 @@
-INSTRUCTION_DEBUG = False
+from settings import debug as INSTRUCTION_DEBUG
 
 def debug(function):
     def wrapper(*args, **kwargs):
@@ -149,7 +149,7 @@ def RET(emulator, mem_flag, stack_flag, data):
 
 @debug_addr
 def PUSH(emulator, mem_flag, stack_flag, data):
-    emulator.stack.append(100+len(emulator.stack))
+    emulator.stack.append(150+len(emulator.stack))
 
 @debug_addr_data
 def POP(emulator, mem_flag, stack_flag, data):

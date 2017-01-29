@@ -5,6 +5,8 @@ from components.memory import Memory
 
 from components.instructions import instructions, InstructionException
 
+import settings
+
 class OctoEngine:
     def __init__(self):
         self.halted = False
@@ -42,10 +44,11 @@ class OctoEngine:
         self.instruction_register += 1
         instructions[instruction](self, mem_flag, stack_flag, data)
         
-        """print(f"Registers: A:{self.reg_a.value}, B:{self.reg_b.value}, F:{self.reg_func.value}")
-        print(f"Stack: {self.stack}")
-        print(f"Mem: {self.memory.memory[200:]}")
-        print()"""
+        if settings.debug:
+            print(f"Registers: A:{self.reg_a.value}, B:{self.reg_b.value}, F:{self.reg_func.value}")
+            print(f"Stack: {self.stack}")
+            print(f"Mem: {self.memory.memory[150:200]}")
+            print()
         
     def run(self):
         while not self.halted:

@@ -29,7 +29,7 @@ class Memory:
         #if index in self.reserved:
         #    raise MemoryAccessException(f"Accessing reserved memory ({index})")
         if not 0 <= index <= 255:
-            raise MemoryAccessException("Out of bounds memory access")
+            raise MemoryAccessException(f"Out of bounds memory access (at byte {index})")
         
         if not type(value) in (int, Register):
             raise MemoryAccessException(f"Tried to store a non int/register in memory ({type(value).__name__}: {index})")
