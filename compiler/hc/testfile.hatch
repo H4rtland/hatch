@@ -3,7 +3,6 @@ function int plus_one(int n) {
 }
 
 function int sum(int a, int b) {
-    print(a, b);
     return a + b;
 }
 
@@ -17,11 +16,15 @@ function int random_integer() {
     return return_value;
 }
 
+function int triangle_number(int n) {
+    return n + triangle_number(n-1);
+}
+
 function void main() {
     let int x = 2;
     x = 16;
     let int y = 4;
-    y = sum(x, y);
+    y = sum(x+1, y);
     print(y);
     y = 80 + random_integer();
     print(x, y);

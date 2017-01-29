@@ -28,9 +28,10 @@ class MemoryModel:
         self.memory = {}
         self.memory_size = 256
         self.stack = []
+        self.temp_extra_stack_vars = 0
         
     def id_on_stack(self, uid):
-        return len(self.stack)-self.stack.index(uid)
+        return len(self.stack)-self.stack.index(uid) + self.temp_extra_stack_vars
         
     def space_is_free(self, at, length):
         for addr, block in self.memory.items():
