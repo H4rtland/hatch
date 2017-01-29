@@ -16,7 +16,7 @@ class Assembler:
         self.memory = MemoryModel()
 
         self.globals = Namespace(None, self.memory)
-        self.globals.locals = {"print":0}
+        self.globals.locals = {"__internal_print":0}
         self.function_addresses = {"main":0}
         self.function_return_addresses = {}
         self.main = None
@@ -53,7 +53,7 @@ class Assembler:
             namespace = Namespace(self.globals, self.memory)
             for arg in function.args:
                 namespace.let(arg[1].lexeme, 1, arg[0].lexeme)
-            self.parse(function.body, namespace)
+            self.parse(function.body, namespace, is_function=True)
             self.function_return_addresses[function.name.lexeme] = len(self.instructions)-1
         
         data_start = len(self.instructions)
@@ -115,6 +115,11 @@ class Assembler:
                 self.parse_binary(namespace, arg)
                 self.add_instruction(Instruction.PUSH, 0)
                 self.add_instruction(Instruction.STA, 1, stack_flag=True)
+            if isinstance(arg, Call):
+                self.parse_call(namespace, arg.callee, arg.args)
+                self.add_instruction(Instruction.MOV, mov(Register.AX, Register.FX)) # MOV AX <- FX
+                self.add_instruction(Instruction.PUSH, 0)
+                self.add_instruction(Instruction.STA, 1, stack_flag=True)
             extra_stack_vars += 1
             self.memory.temp_extra_stack_vars += 1
         self.memory.temp_extra_stack_vars -= extra_stack_vars
@@ -122,7 +127,7 @@ class Assembler:
         
                 
         
-    def parse(self, block, namespace):
+    def parse(self, block, namespace, is_function=False):
         
         already_popped = False
         
@@ -168,11 +173,13 @@ class Assembler:
             if isinstance(statement, Call):
                 if not statement.callee.name in namespace.get_namespace():
                     raise Exception(f"Call to undefined function {statement.callee.name}")
-                if statement.callee.name == "print":
+                if statement.callee.name == "__internal_print":
                     for arg in statement.args:
                         if not arg.name in namespace.get_namespace():
                             raise Exception(f"Call with uninitialised variable {arg.name}")
                         self.add_instruction(Instruction.PRX, self.memory.id_on_stack(namespace.get_namespace()[arg.name]), stack_flag=True) # PRX var
+                else:
+                    self.parse_call(namespace, statement.callee, statement.args)
                         
             if isinstance(statement, Return):
                 already_popped = True
@@ -200,6 +207,7 @@ class Assembler:
         # local variables are freed at the end of a block
         if not already_popped:
             self.add_instruction(Instruction.POP, len(namespace.locals))
-            print("Popping local namespace", len(namespace.locals))
+            if is_function:
+                self.add_instruction(Instruction.RET, 0)
         #for name in namespace.locals:
         #    self.memory.free(namespace.locals[name])

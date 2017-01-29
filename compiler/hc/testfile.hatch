@@ -1,3 +1,7 @@
+function void print(int n) {
+    __internal_print(n);
+}
+
 function int plus_one(int n) {
     return n + 1;
 }
@@ -20,15 +24,13 @@ function int triangle_number(int n) {
     return n + triangle_number(n-1);
 }
 
-function int __none() {
-}
 
 function void main() {
     let int x = 2;
     x = 16;
     let int y = 4;
     y = sum(x+1, y);
-    print(y);
+    print(get_4());
     y = 80 + random_integer();
-    print(x, y);
+    print(x);
 }
