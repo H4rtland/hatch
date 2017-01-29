@@ -20,6 +20,9 @@ function int triangle_number(int n) {
     return n + triangle_number(n-1);
 }
 
+function int __none() {
+}
+
 function void main() {
     let int x = 2;
     x = 16;

@@ -151,7 +151,7 @@ class Tokenizer:
         if next_char.isdigit():
             return self.read_number()
         
-        if next_char.isalpha():
+        if next_char.isalpha() or next_char == "_":
             return self.read_identifier()
         
         print(f"Unhandled token {self.hatch_source[self.start:self.position]}")
