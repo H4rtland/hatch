@@ -23,6 +23,7 @@ class Instruction(Enum):
     PUSH =  0b10011
     POP =   0b10100
     SAVE =  0b10101
+    JNE =   0b10110
     
 class Register(Enum):
     AX = 0

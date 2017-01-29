@@ -151,8 +151,34 @@ class Assembler:
                     self.add_instruction(Instruction.STA, self.memory.id_on_stack(identifier), stack_flag=True) # STA func_return
             
             if isinstance(statement, If):
-                self.parse(statement.then, Namespace(namespace, self.memory))
-                self.parse(statement.otherwise, Namespace(namespace, self.memory))
+                then_index = None
+                else_index = None
+                if isinstance(statement.condition, Binary):
+                    if statement.condition.operator.token_type == TokenType.EQUAL_EQUAL:
+                        if isinstance(statement.condition.left, (Literal, Variable)) and isinstance(statement.condition.right, (Literal, Variable)):
+                            if isinstance(statement.condition.left, Literal):
+                                self.add_instruction(Instruction.LDA, statement.condition.left.value)
+                            elif isinstance(statement.condition.left, Variable):
+                                self.add_instruction(Instruction.LDA, self.memory.id_on_stack(namespace.get_namespace()[statement.condition.left.name]), stack_flag=True)
+                                
+                            if isinstance(statement.condition.right, Literal):
+                                self.add_instruction(Instruction.LDB, statement.condition.right.value)
+                            elif isinstance(statement.condition.right, Variable):
+                                self.add_instruction(Instruction.LDB, self.memory.id_on_stack(namespace.get_namespace()[statement.condition.right.name]), stack_flag=True)
+                            self.add_instruction(Instruction.CMP, 0)
+                            self.add_instruction(Instruction.JE, 0)
+                            then_index = len(self.instructions)-1
+                            self.add_instruction(Instruction.JNE, 0)
+                            else_index = len(self.instructions)-1
+                            self.instructions[then_index] = len(self.instructions)
+                            self.parse(statement.then, Namespace(namespace, self.memory))
+                            self.instructions[else_index] = len(self.instructions)
+                            if not statement.otherwise is None:
+                                self.parse(statement.otherwise, Namespace(namespace, self.memory))
+                                
+                            print("JE at", then_index, "jumps to", self.instructions[then_index])
+                # self.parse(statement.then, Namespace(namespace, self.memory))
+                # self.parse(statement.otherwise, Namespace(namespace, self.memory))
             
             if isinstance(statement, Assign):
                 if not statement.name in namespace.get_namespace():
@@ -180,6 +206,9 @@ class Assembler:
                         self.add_instruction(Instruction.PRX, self.memory.id_on_stack(namespace.get_namespace()[arg.name]), stack_flag=True) # PRX var
                 else:
                     self.parse_call(namespace, statement.callee, statement.args)
+                    
+            #if isinstance(statement, If):
+            #    if statement.condition.
                         
             if isinstance(statement, Return):
                 already_popped = True

@@ -2,35 +2,18 @@ function void print(int n) {
     __internal_print(n);
 }
 
-function int plus_one(int n) {
-    return n + 1;
-}
-
-function int sum(int a, int b) {
-    return a + b;
-}
-
-function int get_4() {
-    return 4;
-}
-
-function int random_integer() {
-    // guaranteed random. chosen by fair dice roll.
-    let int return_value = get_4();
-    return return_value;
-}
-
 function int triangle_number(int n) {
+    if (n == 1) {
+        return 1;
+    }
     return n + triangle_number(n-1);
 }
 
 
 function void main() {
-    let int x = 2;
-    x = 16;
-    let int y = 4;
-    y = sum(x+1, y);
-    print(get_4());
-    y = 80 + random_integer();
-    print(x);
+    // print(triangle_number(5));
+    let int n = 5;
+    if (n == 4) {
+        print(5);
+    }
 }

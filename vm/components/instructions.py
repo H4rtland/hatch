@@ -122,6 +122,7 @@ def CMP(emulator, mem_flag, stack_flag, data):
     emulator.comparisons["JE"] = (reg_a == reg_b)
     emulator.comparisons["JG"] = (reg_a > reg_b)
     emulator.comparisons["JL"] = (reg_a < reg_b)
+    emulator.comparisons["JNE"] = (reg_a != reg_b)
 
 @debug_addr
 def JE(emulator, mem_flag, stack_flag, data):
@@ -148,7 +149,7 @@ def RET(emulator, mem_flag, stack_flag, data):
 
 @debug_addr
 def PUSH(emulator, mem_flag, stack_flag, data):
-    emulator.stack.append(200+len(emulator.stack))
+    emulator.stack.append(100+len(emulator.stack))
 
 @debug_addr_data
 def POP(emulator, mem_flag, stack_flag, data):
@@ -158,6 +159,11 @@ def POP(emulator, mem_flag, stack_flag, data):
 def SAVE(emulator, mem_flag, stack_flag, data):
     emulator.stack.append(emulator.reg_a.value)
     emulator.stack.append(emulator.reg_b.value)
+    
+@debug_addr
+def JNE(emulator, mem_flag, stack_flag, data):
+    if emulator.comparisons["JNE"]:
+        emulator.instruction_register.load(data)
         
 instructions = {
     0b00000: NOP,
@@ -182,6 +188,7 @@ instructions = {
     0b10011: PUSH,
     0b10100: POP,
     0b10101: SAVE,
+    0b10110: JNE,
 }
 
 class InstructionException(Exception):
