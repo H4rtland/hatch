@@ -13,7 +13,9 @@ function int triangle_number(int n) {
 function void main() {
     // print(triangle_number(5));
     let int n = 5;
-    if (n == 4) {
-        print(5);
+    if (n == 5) {
+        print(1);
+    } else {
+        print(0);
     }
 }

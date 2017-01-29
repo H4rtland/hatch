@@ -172,11 +172,12 @@ class Assembler:
                             else_index = len(self.instructions)-1
                             self.instructions[then_index] = len(self.instructions)
                             self.parse(statement.then, Namespace(namespace, self.memory))
+                            self.add_instruction(Instruction.JMP, 0)
+                            then_end_index = len(self.instructions)-1
                             self.instructions[else_index] = len(self.instructions)
                             if not statement.otherwise is None:
                                 self.parse(statement.otherwise, Namespace(namespace, self.memory))
-                                
-                            print("JE at", then_index, "jumps to", self.instructions[then_index])
+                            self.instructions[then_end_index] = len(self.instructions)
                 # self.parse(statement.then, Namespace(namespace, self.memory))
                 # self.parse(statement.otherwise, Namespace(namespace, self.memory))
             
@@ -207,8 +208,6 @@ class Assembler:
                 else:
                     self.parse_call(namespace, statement.callee, statement.args)
                     
-            #if isinstance(statement, If):
-            #    if statement.condition.
                         
             if isinstance(statement, Return):
                 already_popped = True
