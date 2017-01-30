@@ -1,11 +1,18 @@
+import sys
+
 from compiler.tokenizer import TokenType
 from compiler.expressions import *
 
 class ASTParser:
-    def __init__(self, tokens):
+    def __init__(self, tokens, source):
         self.tokens = tokens
+        self.sourcelines = source.split("\n")
         self.position = 0
         self.statements = []
+        self.had_error = False
+        
+    def print_error(self, message):
+        print(message, file=sys.stderr)
     
     def check(self, token_type):
         return self.tokens[self.position].token_type == token_type
@@ -21,7 +28,12 @@ class ASTParser:
             self.position += 1
             return self.tokens[self.position-1]
         
-        raise Exception(f"{error_message} on line {self.tokens[self.position].line}")
+        self.print_error(self.sourcelines[self.tokens[self.position-1].line-1].lstrip())
+        self.print_error(f"{error_message} on line {self.tokens[self.position-1].line-1}")
+        self.print_error("")
+        self.had_error = True
+        #sys.exit(0)
+        #raise Exception(f"{error_message} on line {self.tokens[self.position].line}")
     
     def previous(self):
         return self.tokens[self.position-1]
@@ -34,7 +46,7 @@ class ASTParser:
     def parse(self):
         while not self.at_end():
             self.statements.append(self.declaration())
-        return self.statements
+        return self.statements, self.had_error
     
     def declaration(self):
         if self.match(TokenType.FUNCTION):
