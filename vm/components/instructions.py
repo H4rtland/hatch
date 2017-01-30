@@ -149,7 +149,16 @@ def RET(emulator, mem_flag, stack_flag, data):
 
 @debug_addr
 def PUSH(emulator, mem_flag, stack_flag, data):
-    emulator.stack.append(150+len(emulator.stack))
+    into_addr = 0
+    for addr, occupied in emulator.memory_map.items():
+        if not occupied:
+            into_addr = addr
+            break
+    else:
+        raise Exception("Out of memory")
+    emulator.memory_map[into_addr] = True
+    emulator.stack.append(into_addr)
+    # print("Using memory address", into_addr)
 
 @debug_addr_data
 def POP(emulator, mem_flag, stack_flag, data):

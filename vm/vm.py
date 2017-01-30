@@ -15,6 +15,7 @@ class OctoEngine:
         self.memory = Memory()
         self.stack = []
         self.call_stack = []
+        self.memory_map = {}
         
         
         self.reg_a = Register("A")
@@ -28,10 +29,16 @@ class OctoEngine:
         self.memory.reserve(253, self.reg_counter)
         self.memory.reserve(252, self.instruction_register)
         self.memory.reserve(251, self.reg_func)
+        
+        self.program_end = 0
 
     def load(self, bytestream):
         for index, byte in enumerate(bytestream):
             self.memory[index] = byte
+        self.program_end = len(bytestream)
+        for i in range(self.program_end, 256-16):
+            self.memory_map[i] = False
+        
         
     def instruction_cycle(self):
         instruction = self.memory[self.instruction_register.value] & 0b0011_1111
@@ -43,11 +50,11 @@ class OctoEngine:
         data = self.memory[self.instruction_register]
         self.instruction_register += 1
         instructions[instruction](self, mem_flag, stack_flag, data)
-        
+        #print(sum([1 if not b == 0 else 0 for b in self.memory.memory[self.program_end:]])/len(self.memory.memory[self.program_end:]), len(self.memory.memory[self.program_end:]), len(self.stack))
         if settings.debug:
             print(f"Registers: A:{self.reg_a.value}, B:{self.reg_b.value}, F:{self.reg_func.value}")
             print(f"Stack: {self.stack}")
-            print(f"Mem: {self.memory.memory[150:200]}")
+            print(f"Mem: {self.memory.memory[self.program_end:256-16]}")
             print()
         
     def run(self):

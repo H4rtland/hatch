@@ -61,6 +61,7 @@ class Namespace:
         self.parent = parent
         self.memory = memory
         self.locals = {}
+        self.globals = {}
         self.stack_variables = 0
         
     def let(self, name, length, var_type):
@@ -71,9 +72,11 @@ class Namespace:
         self.memory.stack.append(self.locals[name])
         return self.locals[name]
     
-    def get_namespace(self):
+    def get_namespace(self, no_globals=False):
         if self.parent is None:
-            return self.locals
-        namespace = self.parent.get_namespace()
+            if no_globals:
+                return {}
+            return self.globals
+        namespace = self.parent.get_namespace(no_globals=no_globals)
         namespace.update(self.locals)
         return namespace

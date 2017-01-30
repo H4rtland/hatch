@@ -16,7 +16,7 @@ class Assembler:
         self.memory = MemoryModel()
 
         self.globals = Namespace(None, self.memory)
-        self.globals.locals = {"__internal_print":0}
+        self.globals.globals = {"__internal_print":0}
         self.function_addresses = {"main":0}
         self.function_return_addresses = {}
         self.main = None
@@ -26,7 +26,7 @@ class Assembler:
                 if branch.name.lexeme == "main":
                     self.main = branch
                 else:
-                    self.globals.locals[branch.name.lexeme] = 0
+                    self.globals.globals[branch.name.lexeme] = 0
                     self.non_main_functions.append(branch)
         if self.main is None:
             raise Exception("No main function found")
@@ -149,6 +149,11 @@ class Assembler:
                     identifier = namespace.let(statement.name.lexeme, 1, statement.vtype.lexeme)
                     self.add_instruction(Instruction.PUSH, 0)
                     self.add_instruction(Instruction.STA, self.memory.id_on_stack(identifier), stack_flag=True) # STA func_return
+                if isinstance(statement.initial, Binary):
+                    self.parse_binary(namespace, statement.initial)
+                    identifier = namespace.let(statement.name.lexeme, 1, statement.vtype.lexeme)
+                    self.add_instruction(Instruction.PUSH, 0)
+                    self.add_instruction(Instruction.STA, self.memory.id_on_stack(identifier), stack_flag=True) # STA sum
             
             if isinstance(statement, If):
                 then_index = None
@@ -212,20 +217,20 @@ class Assembler:
             if isinstance(statement, Return):
                 already_popped = True
                 if isinstance(statement.value, Literal):
-                    if len(namespace.locals) > 0:
-                        self.add_instruction(Instruction.POP, len(namespace.locals))
+                    if len(namespace.get_namespace(True)) > 0:
+                        self.add_instruction(Instruction.POP, len(namespace.get_namespace(True)))
                     self.add_instruction(Instruction.RET, statement.value.value) # RET value
                 if isinstance(statement.value, Variable):
                     self.add_instruction(Instruction.LDA, self.memory.id_on_stack(namespace.get_namespace()[statement.value.name]), stack_flag=True)
                     self.add_instruction(Instruction.MOV, mov(Register.FX, Register.AX)) # MOV FX <- AX
-                    if len(namespace.locals) > 0:
-                        self.add_instruction(Instruction.POP, len(namespace.locals))
+                    if len(namespace.get_namespace(True)) > 0:
+                        self.add_instruction(Instruction.POP, len(namespace.get_namespace(True)))
                     self.add_instruction(Instruction.RET, 0, stack_flag=True) # RET none
                 if isinstance(statement.value, Binary):
                     self.parse_binary(namespace, statement.value)
                     self.add_instruction(Instruction.MOV, mov(Register.FX, Register.AX)) # MOV FX <- AX
-                    if len(namespace.locals) > 0:
-                        self.add_instruction(Instruction.POP, len(namespace.locals))
+                    if len(namespace.get_namespace(True)) > 0:
+                        self.add_instruction(Instruction.POP, len(namespace.get_namespace(True)))
                     self.add_instruction(Instruction.RET, 0, stack_flag=True) # RET none
                     
                     
@@ -234,7 +239,7 @@ class Assembler:
         # print(namespace.get_namespace(), self.memory.memory)
         # local variables are freed at the end of a block
         if not already_popped:
-            self.add_instruction(Instruction.POP, len(namespace.locals))
+            self.add_instruction(Instruction.POP, len(namespace.get_namespace(True)))
             if is_function:
                 self.add_instruction(Instruction.RET, 0)
         #for name in namespace.locals:
