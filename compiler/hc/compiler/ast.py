@@ -11,8 +11,11 @@ class ASTParser:
         self.statements = []
         self.had_error = False
         
-    def print_error(self, message):
+    def print_error(self, token, message):
+        print(self.sourcelines[token.line-1].lstrip(), file=sys.stderr)
         print(message, file=sys.stderr)
+        print("", file=sys.stderr)
+        self.had_error = True
     
     def check(self, token_type):
         return self.tokens[self.position].token_type == token_type
@@ -28,10 +31,8 @@ class ASTParser:
             self.position += 1
             return self.tokens[self.position-1]
         
-        self.print_error(self.sourcelines[self.tokens[self.position-1].line-1].lstrip())
-        self.print_error(f"{error_message} on line {self.tokens[self.position-1].line-1}")
-        self.print_error("")
-        self.had_error = True
+        self.print_error(self.tokens[self.position], f"{error_message} on line {self.tokens[self.position-1].line-1}")
+        
         #sys.exit(0)
         #raise Exception(f"{error_message} on line {self.tokens[self.position].line}")
     
@@ -197,6 +198,8 @@ class ASTParser:
             return Literal(False)
         
         if self.match(TokenType.STRING, TokenType.NUMBER):
+            if not (0 <= self.previous().literal <= 255):
+                self.print_error(self.previous(), "Integer literal outside range 0-255")
             return Literal(self.previous().literal)
         
         if self.match(TokenType.IDENTIFIER):
