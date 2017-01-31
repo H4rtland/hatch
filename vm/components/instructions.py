@@ -162,6 +162,8 @@ def PUSH(emulator, mem_flag, stack_flag, data):
 
 @debug_addr_data
 def POP(emulator, mem_flag, stack_flag, data):
+    for i in range(0, data):
+        emulator.memory_map[emulator.stack[-(i+1)]] = False
     emulator.stack = emulator.stack[:-data]
 
 @debug
