@@ -7,6 +7,8 @@ from compiler.instructions import Instruction, Register, mov
 
 import uuid
 
+SAVED_REGISTERS = 2
+
         
             
 class Assembler:
@@ -104,8 +106,8 @@ class Assembler:
     def parse_call(self, namespace, func, args):
         # Save register state to restore after function return
         self.add_instruction(Instruction.SAVE, 0)
-        extra_stack_vars = 2
-        self.memory.temp_extra_stack_vars += 2
+        extra_stack_vars = SAVED_REGISTERS
+        self.memory.temp_extra_stack_vars += SAVED_REGISTERS
         # Add parameters to stack
         for arg in args:
             if isinstance(arg, Literal):
@@ -135,7 +137,12 @@ class Assembler:
     def parse_if(self, namespace, statement):
         then_index = None
         else_index = None
-        if isinstance(statement.condition, Binary):
+        if isinstance(statement.condition, Literal):
+            if statement.condition.value == True:
+                self.parse(statement.then, Namespace(namespace, self.memory))
+            elif not (statement.otherwise is None):
+                self.parse(statement.otherwise, Namespace(namespace, self.memory))
+        elif isinstance(statement.condition, Binary):
             true_inst = None
             false_inst = None
             if statement.condition.operator.token_type == TokenType.EQUAL_EQUAL:
@@ -177,6 +184,9 @@ class Assembler:
             if not statement.otherwise is None:
                 self.parse(statement.otherwise, Namespace(namespace, self.memory))
             self.instructions[then_end_index] = len(self.instructions)
+        
+        else:
+            raise Exception("Unhandled if condition")
                 
         
     def parse(self, block, namespace, is_function=False):
@@ -272,8 +282,13 @@ class Assembler:
         # print(namespace.get_namespace(), self.memory.memory)
         # local variables are freed at the end of a block
         if not already_popped:
-            self.add_instruction(Instruction.POP, len(namespace.get_namespace(True)))
             if is_function:
+                if len(namespace.get_namespace(True)) > 0:
+                    self.add_instruction(Instruction.POP, len(namespace.get_namespace(True)))
                 self.add_instruction(Instruction.RET, 0)
+            else:
+                if len(namespace.locals) > 0:
+                    self.add_instruction(Instruction.POP, len(namespace.locals))
+                
         #for name in namespace.locals:
         #    self.memory.free(namespace.locals[name])

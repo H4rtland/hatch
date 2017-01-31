@@ -69,12 +69,15 @@ def HLT(emulator, mem_flag, stack_flag, data):
 
 @debug_addr_data
 def PRX(emulator, mem_flag, stack_flag, data):
+    to_print = 0
     if mem_flag:
-        print(emulator.memory[data])
+        to_print = emulator.memory[data]
     elif stack_flag:
-        print(emulator.memory[emulator.stack[-data]])
+        to_print = emulator.memory[emulator.stack[-data]]
     else:
-        print(data)
+        to_print = data
+    #print(str(bytes([to_print,]), "utf8"))
+    print(to_print)
 
 @debug_addr
 def JMP(emulator, mem_flag, stack_flag, data):
