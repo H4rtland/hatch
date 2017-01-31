@@ -125,6 +125,49 @@ class Assembler:
         self.memory.temp_extra_stack_vars -= extra_stack_vars
         self.add_instruction(Instruction.CALL, FunctionAddress(func)) # CALL function_start
         
+    def parse_if(self, namespace, statement):
+        then_index = None
+        else_index = None
+        if isinstance(statement.condition, Binary):
+            true_inst = None
+            false_inst = None
+            if statement.condition.operator.token_type == TokenType.EQUAL_EQUAL:
+                true_inst = Instruction.JE
+                false_inst = Instruction.JNE
+                
+            if isinstance(statement.condition.left, Literal):
+                self.add_instruction(Instruction.LDA, statement.condition.left.value)
+            elif isinstance(statement.condition.left, Variable):
+                self.add_instruction(Instruction.LDA, self.memory.id_on_stack(namespace.get_namespace()[statement.condition.left.name]), stack_flag=True)
+            elif isinstance(statement.condition.left, Call):
+                self.parse_call(namespace, statement.condition.left.callee, statement.condition.left.args)
+                self.add_instruction(Instruction.MOV, mov(Register.AX, Register.FX))
+            else:
+                raise Exception("Unhandled if statement condition")
+            
+            if isinstance(statement.condition.right, Literal):
+                self.add_instruction(Instruction.LDB, statement.condition.right.value)
+            elif isinstance(statement.condition.right, Variable):
+                self.add_instruction(Instruction.LDB, self.memory.id_on_stack(namespace.get_namespace()[statement.condition.right.name]), stack_flag=True)
+            elif isinstance(statement.condition.right, Call):
+                self.parse_call(namespace, statement.condition.right.callee, statement.condition.right.args)
+                self.add_instruction(Instruction.MOV, mov(Register.BX, Register.FX))
+            else:
+                raise Exception("Unhandled if statement condition")
+                
+            self.add_instruction(Instruction.CMP, 0)
+            self.add_instruction(true_inst, 0)
+            then_index = len(self.instructions)-1
+            self.add_instruction(false_inst, 0)
+            else_index = len(self.instructions)-1
+            self.instructions[then_index] = len(self.instructions)
+            self.parse(statement.then, Namespace(namespace, self.memory))
+            self.add_instruction(Instruction.JMP, 0)
+            then_end_index = len(self.instructions)-1
+            self.instructions[else_index] = len(self.instructions)
+            if not statement.otherwise is None:
+                self.parse(statement.otherwise, Namespace(namespace, self.memory))
+            self.instructions[then_end_index] = len(self.instructions)
                 
         
     def parse(self, block, namespace, is_function=False):
@@ -156,35 +199,7 @@ class Assembler:
                     self.add_instruction(Instruction.STA, self.memory.id_on_stack(identifier), stack_flag=True) # STA sum
             
             if isinstance(statement, If):
-                then_index = None
-                else_index = None
-                if isinstance(statement.condition, Binary):
-                    if statement.condition.operator.token_type == TokenType.EQUAL_EQUAL:
-                        if isinstance(statement.condition.left, (Literal, Variable)) and isinstance(statement.condition.right, (Literal, Variable)):
-                            if isinstance(statement.condition.left, Literal):
-                                self.add_instruction(Instruction.LDA, statement.condition.left.value)
-                            elif isinstance(statement.condition.left, Variable):
-                                self.add_instruction(Instruction.LDA, self.memory.id_on_stack(namespace.get_namespace()[statement.condition.left.name]), stack_flag=True)
-                                
-                            if isinstance(statement.condition.right, Literal):
-                                self.add_instruction(Instruction.LDB, statement.condition.right.value)
-                            elif isinstance(statement.condition.right, Variable):
-                                self.add_instruction(Instruction.LDB, self.memory.id_on_stack(namespace.get_namespace()[statement.condition.right.name]), stack_flag=True)
-                            self.add_instruction(Instruction.CMP, 0)
-                            self.add_instruction(Instruction.JE, 0)
-                            then_index = len(self.instructions)-1
-                            self.add_instruction(Instruction.JNE, 0)
-                            else_index = len(self.instructions)-1
-                            self.instructions[then_index] = len(self.instructions)
-                            self.parse(statement.then, Namespace(namespace, self.memory))
-                            self.add_instruction(Instruction.JMP, 0)
-                            then_end_index = len(self.instructions)-1
-                            self.instructions[else_index] = len(self.instructions)
-                            if not statement.otherwise is None:
-                                self.parse(statement.otherwise, Namespace(namespace, self.memory))
-                            self.instructions[then_end_index] = len(self.instructions)
-                # self.parse(statement.then, Namespace(namespace, self.memory))
-                # self.parse(statement.otherwise, Namespace(namespace, self.memory))
+                self.parse_if(namespace, statement)
             
             if isinstance(statement, Assign):
                 if not statement.name in namespace.get_namespace():
