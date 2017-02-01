@@ -31,6 +31,9 @@ class Assign:
     
     def print(self, indent=0):
         print("    "*indent + f"<Assign: {self.name} = {self.value}>")
+    
+    def __repr__(self):
+        return f"<Assign: {self.name} = {self.value}>"
             
         
 class Let:
@@ -41,6 +44,9 @@ class Let:
         
     def print(self, indent=0):
         print("    "*indent + f"<Let: {self.vtype.lexeme} {self.name.lexeme} = {self.initial}>")
+        
+    def __repr__(self):
+        return f"<Let: {self.vtype.lexeme} {self.name.lexeme} = {self.initial}>"
         
 class Variable:
     def __init__(self, name):
@@ -107,3 +113,13 @@ class Unary:
         
     def __repr__(self):
         return f"<Unary: {self.operator.lexeme} {self.right}>"
+    
+class For:
+    def __init__(self, declare, condition, action, block):
+        self.declare = declare
+        self.condition = condition
+        self.action = action
+        self.block = block
+        
+    def print(self, indent=0):
+        print("    "*indent + f"<For: {self.declare}; {self.condition}; {self.action}>")

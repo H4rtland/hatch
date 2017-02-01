@@ -31,6 +31,7 @@ class MemoryModel:
         self.temp_extra_stack_vars = 0
         
     def id_on_stack(self, uid):
+        # print(f"Getting ID on stack, uid={uid}, stack={self.stack}, temp_extra={self.temp_extra_stack_vars} -> {len(self.stack)-self.stack.index(uid) + self.temp_extra_stack_vars}")
         return len(self.stack)-self.stack.index(uid) + self.temp_extra_stack_vars
         
     def space_is_free(self, at, length):
@@ -55,6 +56,9 @@ class MemoryModel:
     def free(self, address):
         if address in self.memory:
             del self.memory[address]
+            
+    def unstack(self, number):
+        self.stack = self.stack[:-number]
     
 class Namespace:
     def __init__(self, parent, memory):

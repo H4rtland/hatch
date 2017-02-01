@@ -134,6 +134,28 @@ class Assembler:
         self.memory.temp_extra_stack_vars -= extra_stack_vars
         self.add_instruction(Instruction.CALL, FunctionAddress(func)) # CALL function_start
         
+    
+    def parse_comparison(self, namespace, condition):
+        if isinstance(condition.left, Literal):
+            self.add_instruction(Instruction.LDA, condition.left.value)
+        elif isinstance(condition.left, Variable):
+            self.add_instruction(Instruction.LDA, self.memory.id_on_stack(namespace.get_namespace()[condition.left.name]), stack_flag=True)
+        elif isinstance(condition.left, Call):
+            self.parse_call(namespace, condition.left.callee, condition.left.args)
+            self.add_instruction(Instruction.MOV, mov(Register.AX, Register.FX))
+        else:
+            raise Exception("Unhandled if statement condition")
+        
+        if isinstance(condition.right, Literal):
+            self.add_instruction(Instruction.LDB, condition.right.value)
+        elif isinstance(condition.right, Variable):
+            self.add_instruction(Instruction.LDB, self.memory.id_on_stack(namespace.get_namespace()[condition.right.name]), stack_flag=True)
+        elif isinstance(condition.right, Call):
+            self.parse_call(namespace, condition.right.callee, condition.right.args)
+            self.add_instruction(Instruction.MOV, mov(Register.BX, Register.FX))
+        else:
+            raise Exception("Unhandled if statement condition")
+    
     def parse_if(self, namespace, statement):
         then_index = None
         else_index = None
@@ -151,25 +173,7 @@ class Assembler:
             else:
                 raise Exception("Unhandled if condition operator")
                 
-            if isinstance(statement.condition.left, Literal):
-                self.add_instruction(Instruction.LDA, statement.condition.left.value)
-            elif isinstance(statement.condition.left, Variable):
-                self.add_instruction(Instruction.LDA, self.memory.id_on_stack(namespace.get_namespace()[statement.condition.left.name]), stack_flag=True)
-            elif isinstance(statement.condition.left, Call):
-                self.parse_call(namespace, statement.condition.left.callee, statement.condition.left.args)
-                self.add_instruction(Instruction.MOV, mov(Register.AX, Register.FX))
-            else:
-                raise Exception("Unhandled if statement condition")
-            
-            if isinstance(statement.condition.right, Literal):
-                self.add_instruction(Instruction.LDB, statement.condition.right.value)
-            elif isinstance(statement.condition.right, Variable):
-                self.add_instruction(Instruction.LDB, self.memory.id_on_stack(namespace.get_namespace()[statement.condition.right.name]), stack_flag=True)
-            elif isinstance(statement.condition.right, Call):
-                self.parse_call(namespace, statement.condition.right.callee, statement.condition.right.args)
-                self.add_instruction(Instruction.MOV, mov(Register.BX, Register.FX))
-            else:
-                raise Exception("Unhandled if statement condition")
+            self.parse_comparison(namespace, statement.condition)
                 
             self.add_instruction(Instruction.CMP, 0)
             self.add_instruction(true_inst, 0)
@@ -187,57 +191,89 @@ class Assembler:
         
         else:
             raise Exception("Unhandled if condition")
+        
+    def parse_let(self, namespace, statement):
+        if isinstance(statement.initial, Literal):
+            identifier = namespace.let(statement.name.lexeme, 1, statement.vtype.lexeme)
+            value = statement.initial.value
+            self.add_instruction(Instruction.PUSH, 0)
+            self.add_instruction(Instruction.LDA, value) # LDA value
+            self.add_instruction(Instruction.STA, self.memory.id_on_stack(identifier), stack_flag=True) # STA var_name
+        elif isinstance(statement.initial, Call):
+            self.parse_call(namespace, statement.initial.callee, statement.initial.args)
+            self.add_instruction(Instruction.MOV, mov(Register.AX, Register.FX)) # MOV AX <- FX
+            identifier = namespace.let(statement.name.lexeme, 1, statement.vtype.lexeme)
+            self.add_instruction(Instruction.PUSH, 0)
+            self.add_instruction(Instruction.STA, self.memory.id_on_stack(identifier), stack_flag=True) # STA func_return
+        elif isinstance(statement.initial, Binary):
+            self.parse_binary(namespace, statement.initial)
+            identifier = namespace.let(statement.name.lexeme, 1, statement.vtype.lexeme)
+            self.add_instruction(Instruction.PUSH, 0)
+            self.add_instruction(Instruction.STA, self.memory.id_on_stack(identifier), stack_flag=True) # STA sum
+        else:
+            raise Exception("Unhandled let statement")
+        
+    def parse_assign(self, namespace, statement):
+        if not statement.name in namespace.get_namespace():
+            raise Exception(f"Assignment to uninitialised variable {statement.name}. Use 'let type name = value;' to initialise.")
+        if isinstance(statement.value, Literal):
+            value = statement.value.value
+            self.add_instruction(Instruction.LDA, value) # LDA value
+            self.add_instruction(Instruction.STA, self.memory.id_on_stack(namespace.get_namespace()[statement.name]), stack_flag=True) # STA [var_name]
+        elif isinstance(statement.value, Binary):
+            self.parse_binary(namespace, statement.value)
+            self.add_instruction(Instruction.STA, self.memory.id_on_stack(namespace.get_namespace()[statement.name]), stack_flag=True) # STA [var_name]
+        elif isinstance(statement.value, Call):
+            self.parse_call(namespace, statement.value.callee, statement.value.args)
+            self.add_instruction(Instruction.MOV, mov(Register.AX, Register.FX)) # MOV AX <- FX
+            self.add_instruction(Instruction.STA, self.memory.id_on_stack(namespace.get_namespace()[statement.name]), stack_flag=True) # STA func_return
+        else:
+            raise Exception("Unhandled assign statement")
+        
+    def parse_for(self, namespace, statement):
+        # comparison used to jump to end of loop
+        compare_inst = {
+            TokenType.EQUAL_EQUAL: Instruction.JNE,
+            TokenType.LESS: Instruction.JGE,
+            TokenType.GREATER: Instruction.JLE,
+            TokenType.LESS_EQUAL: Instruction.JG,
+            TokenType.GREATER_EQUAL: Instruction.JL,
+        }[statement.condition.operator.token_type]
+        self.parse_let(namespace, statement.declare)
+        comparison_start = len(self.instructions)
+        self.parse_comparison(namespace, statement.condition)
+        self.add_instruction(Instruction.CMP, 0)
+        self.add_instruction(compare_inst, 0)
+        compare_data_byte = len(self.instructions)-1
+        self.parse(statement.block, namespace, dont_free=True)
+        action_start = len(self.instructions)
+        self.parse_assign(namespace, statement.action)
+        self.add_instruction(Instruction.JMP, comparison_start)
+        end_addr = len(self.instructions)
+        self.instructions[compare_data_byte] = end_addr
+        
+        self.memory.unstack(len(namespace.locals))
+        self.add_instruction(Instruction.POP, len(namespace.locals))
+        
+        
                 
         
-    def parse(self, block, namespace, is_function=False):
-        
-        already_popped = False
+    def parse(self, block, namespace, is_function=False, dont_free=False):
+
+        already_popped = dont_free
         
         for statement in block.statements:
             if isinstance(statement, Block):
                 self.parse(statement, Namespace(namespace, self.memory))
             
             elif isinstance(statement, Let):
-                
-                if isinstance(statement.initial, Literal):
-                    identifier = namespace.let(statement.name.lexeme, 1, statement.vtype.lexeme)
-                    value = statement.initial.value
-                    self.add_instruction(Instruction.PUSH, 0)
-                    self.add_instruction(Instruction.LDA, value) # LDA value
-                    self.add_instruction(Instruction.STA, self.memory.id_on_stack(identifier), stack_flag=True) # STA var_name
-                elif isinstance(statement.initial, Call):
-                    self.parse_call(namespace, statement.initial.callee, statement.initial.args)
-                    self.add_instruction(Instruction.MOV, mov(Register.AX, Register.FX)) # MOV AX <- FX
-                    identifier = namespace.let(statement.name.lexeme, 1, statement.vtype.lexeme)
-                    self.add_instruction(Instruction.PUSH, 0)
-                    self.add_instruction(Instruction.STA, self.memory.id_on_stack(identifier), stack_flag=True) # STA func_return
-                elif isinstance(statement.initial, Binary):
-                    self.parse_binary(namespace, statement.initial)
-                    identifier = namespace.let(statement.name.lexeme, 1, statement.vtype.lexeme)
-                    self.add_instruction(Instruction.PUSH, 0)
-                    self.add_instruction(Instruction.STA, self.memory.id_on_stack(identifier), stack_flag=True) # STA sum
-                else:
-                    raise Exception("Unhandled let statement")
+                self.parse_let(namespace, statement)
             
             elif isinstance(statement, If):
                 self.parse_if(namespace, statement)
             
             elif isinstance(statement, Assign):
-                if not statement.name in namespace.get_namespace():
-                    raise Exception(f"Assignment to uninitialised variable {statement.name}. Use 'let type name = value;' to initialise.")
-                if isinstance(statement.value, Literal):
-                    value = statement.value.value
-                    self.add_instruction(Instruction.LDA, value) # LDA value
-                    self.add_instruction(Instruction.STA, self.memory.id_on_stack(namespace.get_namespace()[statement.name]), stack_flag=True) # STA [var_name]
-                elif isinstance(statement.value, Binary):
-                    self.parse_binary(namespace, statement.value)
-                    self.add_instruction(Instruction.STA, self.memory.id_on_stack(namespace.get_namespace()[statement.name]), stack_flag=True) # STA [var_name]
-                elif isinstance(statement.value, Call):
-                    self.parse_call(namespace, statement.value.callee, statement.value.args)
-                    self.add_instruction(Instruction.MOV, mov(Register.AX, Register.FX)) # MOV AX <- FX
-                    self.add_instruction(Instruction.STA, self.memory.id_on_stack(namespace.get_namespace()[statement.name]), stack_flag=True) # STA func_return
-                else:
-                    raise Exception("Unhandled let statement")
+                self.parse_assign(namespace, statement)
                         
             
             elif isinstance(statement, Call):
@@ -273,13 +309,13 @@ class Assembler:
                 else:
                     raise Exception("Unhandled return value")
                 
+            elif isinstance(statement, For):
+                self.parse_for(Namespace(namespace, self.memory), statement)
+                
             else:
                 raise Exception("Unhandled statement type")
                     
-                    
-                    
-         
-        # print(namespace.get_namespace(), self.memory.memory)
+        
         # local variables are freed at the end of a block
         if not already_popped:
             if is_function:
@@ -288,6 +324,7 @@ class Assembler:
                 self.add_instruction(Instruction.RET, 0)
             else:
                 if len(namespace.locals) > 0:
+                    self.memory.unstack(len(namespace.locals))
                     self.add_instruction(Instruction.POP, len(namespace.locals))
                 
         #for name in namespace.locals:

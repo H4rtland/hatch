@@ -24,6 +24,10 @@ class Instruction(Enum):
     POP =   0b10100
     SAVE =  0b10101
     JNE =   0b10110
+    JG =    0b10111
+    JL =    0b11000
+    JGE =   0b11001
+    JLE =   0b11010
     
 class Register(Enum):
     AX = 0

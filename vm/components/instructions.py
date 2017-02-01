@@ -124,7 +124,9 @@ def CMP(emulator, mem_flag, stack_flag, data):
     reg_b = emulator.reg_b.value
     emulator.comparisons["JE"] = (reg_a == reg_b)
     emulator.comparisons["JG"] = (reg_a > reg_b)
+    emulator.comparisons["JGE"] = (reg_a >= reg_b)
     emulator.comparisons["JL"] = (reg_a < reg_b)
+    emulator.comparisons["JLE"] = (reg_a <= reg_b)
     emulator.comparisons["JNE"] = (reg_a != reg_b)
 
 @debug_addr
@@ -178,6 +180,26 @@ def SAVE(emulator, mem_flag, stack_flag, data):
 def JNE(emulator, mem_flag, stack_flag, data):
     if emulator.comparisons["JNE"]:
         emulator.instruction_register.load(data)
+
+@debug_addr
+def JG(emulator, mem_flag, stack_flag, data):
+    if emulator.comparisons["JG"]:
+        emulator.instruction_register.load(data)
+        
+@debug_addr
+def JL(emulator, mem_flag, stack_flag, data):
+    if emulator.comparisons["JL"]:
+        emulator.instruction_register.load(data)
+    
+@debug_addr
+def JGE(emulator, mem_flag, stack_flag, data):
+    if emulator.comparisons["JGE"]:
+        emulator.instruction_register.load(data)
+        
+@debug_addr
+def JLE(emulator, mem_flag, stack_flag, data):
+    if emulator.comparisons["JLE"]:
+        emulator.instruction_register.load(data)
         
 instructions = {
     0b00000: NOP,
@@ -203,6 +225,10 @@ instructions = {
     0b10100: POP,
     0b10101: SAVE,
     0b10110: JNE,
+    0b10111: JG,
+    0b11000: JL,
+    0b11001: JGE,
+    0b11010: JLE,
 }
 
 class InstructionException(Exception):

@@ -21,8 +21,8 @@ if __name__ == "__main__":
     if error:
         sys.exit()
     
-    #for trunk in tree:
-    #    trunk.print()
+    for trunk in tree:
+        trunk.print()
         
     assembler = Assembler(tree)
     instructions = assembler.assemble()

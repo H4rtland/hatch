@@ -49,11 +49,11 @@ class ASTParser:
             self.statements.append(self.declaration())
         return self.statements, self.had_error
     
-    def declaration(self):
+    def declaration(self, no_let_semicolon=False):
         if self.match(TokenType.FUNCTION):
             return self.function()
         if self.match(TokenType.LET):
-            return self.let()
+            return self.let(no_let_semicolon)
         if self.match(TokenType.RETURN):
             return self.return_statement()
         
@@ -64,6 +64,8 @@ class ASTParser:
             return self.block()
         if self.match(TokenType.IF):
             return self.if_statement()
+        if self.match(TokenType.FOR):
+            return self.for_()
         
         return self.expression_statement()
     
@@ -207,12 +209,13 @@ class ASTParser:
         
         return Literal(0)
         
-    def let(self):
+    def let(self, no_semicolon=False):
         vtype = self.consume(TokenType.IDENTIFIER, "Expected variable type")
         name = self.consume(TokenType.IDENTIFIER, "Expected variable name")
         self.consume(TokenType.EQUAL, "Expected '=' in let statement")
         initial = self.expression()
-        self.consume(TokenType.SEMICOLON, "Expected semicolon following let statement")
+        if not no_semicolon:
+            self.consume(TokenType.SEMICOLON, "Expected semicolon following let statement")
         return Let(vtype, name, initial)
     
     def return_statement(self):
@@ -221,3 +224,16 @@ class ASTParser:
             value = self.expression()
         self.consume(TokenType.SEMICOLON, "Expected semicolon after return statement")
         return Return(value)
+    
+    def for_(self):
+        self.consume(TokenType.LEFT_BRACKET, "Expected '(' after for")
+        declare = self.declaration(no_let_semicolon=True)
+        self.consume(TokenType.SEMICOLON, "Expected ';' in for loop")
+        condition = self.expression()
+        self.consume(TokenType.SEMICOLON, "Expected ';' in for loop")
+        action = self.expression()
+        self.consume(TokenType.RIGHT_BRACKET, "Expected ')' after for")
+        
+        body = self.statement()
+
+        return For(declare, condition, action, body)
