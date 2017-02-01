@@ -65,18 +65,18 @@ class Namespace:
         self.stack_variables = 0
         
     def let(self, name, length, var_type):
-        #print(f"Allocating variable {name} in namespace")
-        #addr = self.memory.allocate(length, var_type)
+        # addr = self.memory.allocate(length, var_type)
         self.locals[name] = uuid.uuid4().hex
         self.stack_variables += 1
         self.memory.stack.append(self.locals[name])
+        # print(f"Allocating variable {name} in namespace, {self.locals}, {self.get_namespace()}")
         return self.locals[name]
     
     def get_namespace(self, no_globals=False):
         if self.parent is None:
             if no_globals:
                 return {}
-            return self.globals
+            return dict(self.globals)
         namespace = self.parent.get_namespace(no_globals=no_globals)
         namespace.update(self.locals)
-        return namespace
+        return dict(namespace)
