@@ -77,7 +77,9 @@ def PRX(emulator, mem_flag, stack_flag, data):
     else:
         to_print = data
     #print(str(bytes([to_print,]), "utf8"))
-    print(to_print)
+    if not emulator.redirect_output:
+        print(to_print)
+    emulator.output.append(to_print)
 
 @debug_addr
 def JMP(emulator, mem_flag, stack_flag, data):

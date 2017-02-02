@@ -8,8 +8,11 @@ from components.instructions import instructions, InstructionException
 import settings
 
 class OctoEngine:
-    def __init__(self):
+    def __init__(self, redirect_output=False):
         self.halted = False
+        self.redirect_output = redirect_output
+        self.output = []
+        
         self.comparisons = {"JE":False, "JG":False, "JL":False}
         
         self.memory = Memory()
@@ -60,6 +63,7 @@ class OctoEngine:
     def run(self):
         while not self.halted:
             self.instruction_cycle()
+        return self.output
             
     def halt(self):
         self.halted = True

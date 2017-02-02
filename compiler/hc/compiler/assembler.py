@@ -48,14 +48,14 @@ class Assembler:
         
         
     def assemble(self):
-        self.parse(self.main.body, Namespace(self.globals, self.memory))
+        self.parse(Namespace(self.globals, self.memory), self.main.body)
         self.add_instruction(Instruction.HLT, 0) # HLT
         for function in self.non_main_functions:
             self.function_addresses[function.name.lexeme] = len(self.instructions)
             namespace = Namespace(self.globals, self.memory)
             for arg in function.args:
                 namespace.let(arg[1].lexeme, 1, arg[0].lexeme)
-            self.parse(function.body, namespace, is_function=True)
+            self.parse(namespace, function.body, is_function=True)
             self.function_return_addresses[function.name.lexeme] = len(self.instructions)-1
         
         data_start = len(self.instructions)
@@ -161,9 +161,9 @@ class Assembler:
         else_index = None
         if isinstance(statement.condition, Literal):
             if statement.condition.value == True:
-                self.parse(statement.then, Namespace(namespace, self.memory))
+                self.parse(Namespace(namespace, self.memory), statement.then)
             elif not (statement.otherwise is None):
-                self.parse(statement.otherwise, Namespace(namespace, self.memory))
+                self.parse(Namespace(namespace, self.memory), statement.otherwise)
         elif isinstance(statement.condition, Binary):
             true_inst = None
             false_inst = None
@@ -181,12 +181,12 @@ class Assembler:
             self.add_instruction(false_inst, 0)
             else_index = len(self.instructions)-1
             self.instructions[then_index] = len(self.instructions)
-            self.parse(statement.then, Namespace(namespace, self.memory))
+            self.parse(Namespace(namespace, self.memory), statement.then)
             self.add_instruction(Instruction.JMP, 0)
             then_end_index = len(self.instructions)-1
             self.instructions[else_index] = len(self.instructions)
             if not statement.otherwise is None:
-                self.parse(statement.otherwise, Namespace(namespace, self.memory))
+                self.parse(Namespace(namespace, self.memory), statement.otherwise)
             self.instructions[then_end_index] = len(self.instructions)
         
         else:
@@ -245,7 +245,7 @@ class Assembler:
         self.add_instruction(Instruction.CMP, 0)
         self.add_instruction(compare_inst, 0)
         compare_data_byte = len(self.instructions)-1
-        self.parse(statement.block, namespace, dont_free=True)
+        self.parse(namespace, statement.block, dont_free=True)
         action_start = len(self.instructions)
         self.parse_assign(namespace, statement.action)
         self.add_instruction(Instruction.JMP, comparison_start)
@@ -258,13 +258,13 @@ class Assembler:
         
                 
         
-    def parse(self, block, namespace, is_function=False, dont_free=False):
+    def parse(self, namespace, block, is_function=False, dont_free=False):
 
         already_popped = dont_free
         
         for statement in block.statements:
             if isinstance(statement, Block):
-                self.parse(statement, Namespace(namespace, self.memory))
+                self.parse(Namespace(namespace, self.memory), statement)
             
             elif isinstance(statement, Let):
                 self.parse_let(namespace, statement)
