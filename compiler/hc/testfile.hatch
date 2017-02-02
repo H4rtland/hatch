@@ -2,9 +2,8 @@ function void print(int n) {
     __internal_print(n);
 }
 
-
 function void main() {
-    for(let int i=0; i<10; i=i+1) {
+    /*for(let int i=0; i<10; i=i+1) {
         print(i);
-    }
+    }*/
 }

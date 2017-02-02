@@ -307,7 +307,7 @@ class Assembler:
                         self.add_instruction(Instruction.POP, len(namespace.get_namespace(True)))
                     self.add_instruction(Instruction.RET, 0, stack_flag=True) # RET none
                 else:
-                    raise Exception("Unhandled return value")
+                    raise Exception("Unhandled return value", statement.value)
                 
             elif isinstance(statement, For):
                 self.parse_for(Namespace(namespace, self.memory), statement)

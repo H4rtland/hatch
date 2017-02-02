@@ -207,7 +207,7 @@ class ASTParser:
         if self.match(TokenType.IDENTIFIER):
             return Variable(self.previous().lexeme)
         
-        return Literal(0)
+        return Literal(1)
         
     def let(self, no_semicolon=False):
         vtype = self.consume(TokenType.IDENTIFIER, "Expected variable type")

@@ -135,6 +135,19 @@ class Tokenizer:
                 while (not self.at_end()) and self.peek(1) != "\n":
                     self.next()
                 return
+            elif self.peek_for("*"):
+                opened = 1
+                while not self.at_end():
+                    self.next()
+                    if self.peek(1) == "/" and self.peek(2) == "*":
+                        opened += 1
+                    if self.peek(1) == "*" and self.peek(2) == "/":
+                        opened -= 1
+                    if opened == 0:
+                        self.next()
+                        self.next()
+                        break
+                return
             else:
                 return self.add_token(TokenType.SLASH)
             
