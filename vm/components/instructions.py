@@ -38,7 +38,7 @@ def LDA(emulator, mem_flag, stack_flag, data):
     if mem_flag:
         emulator.reg_a.load(emulator.memory[data])
     elif stack_flag:
-        emulator.reg_a.load(emulator.memory[emulator.stack[-data]])
+        emulator.reg_a.load(emulator.memory[emulator.stack[-data]+emulator.reg_offset.value])
     else:
         emulator.reg_a.load(data)
 
@@ -47,7 +47,7 @@ def LDB(emulator, mem_flag, stack_flag, data):
     if mem_flag:
         emulator.reg_b.load(emulator.memory[data])
     elif stack_flag:
-        emulator.reg_b.load(emulator.memory[emulator.stack[-data]])
+        emulator.reg_b.load(emulator.memory[emulator.stack[-data]+emulator.reg_offset.value])
     else:
         emulator.reg_b.load(data)
 
@@ -73,7 +73,7 @@ def PRX(emulator, mem_flag, stack_flag, data):
     if mem_flag:
         to_print = emulator.memory[data]
     elif stack_flag:
-        to_print = emulator.memory[emulator.stack[-data]]
+        to_print = emulator.memory[emulator.stack[-data]+emulator.reg_offset.value]
     else:
         to_print = data
     #print(str(bytes([to_print,]), "utf8"))
@@ -91,27 +91,27 @@ def JMP(emulator, mem_flag, stack_flag, data):
 @debug_addr_data_store
 def STA(emulator, mem_flag, stack_flag, data):
     if stack_flag:
-        emulator.memory[emulator.stack[-data]] = emulator.reg_a.value
+        emulator.memory[emulator.stack[-data]+emulator.reg_offset.value] = emulator.reg_a.value
     else:
         emulator.memory[data] = emulator.reg_a.value
 
 @debug_addr_data_store
 def STB(emulator, mem_flag, stack_flag, data):
     if stack_flag:
-        emulator.memory[emulator.stack[-data]] = emulator.reg_b.value
+        emulator.memory[emulator.stack[-data]+emulator.reg_offset.value] = emulator.reg_b.value
     else:
         emulator.memory[data] = emulator.reg_b.value
 
 @debug_addr
 def INC(emulator, mem_flag, stack_flag, data):
     if stack_flag:
-        emulator.memory[emulator.stack[-data]] += 1
+        emulator.memory[emulator.stack[-data]+emulator.reg_offset.value] += 1
     emulator.memory[data] += 1
     
 @debug_addr
 def DEC(emulator, mem_flag, stack_flag, data):
     if stack_flag:
-        emulator.memory[emulator.stack[-data]] -= 1
+        emulator.memory[emulator.stack[-data]+emulator.reg_offset.value] -= 1
     emulator.memory[data] -= 1
     
 @debug_addr
@@ -158,12 +158,14 @@ def RET(emulator, mem_flag, stack_flag, data):
 def PUSH(emulator, mem_flag, stack_flag, data):
     into_addr = 0
     for addr, occupied in emulator.memory_map.items():
-        if not occupied:
+        if not occupied and all(not emulator.memory_map[a] for a in range(addr, addr+data)):
             into_addr = addr
             break
     else:
         raise Exception("Out of memory")
     emulator.memory_map[into_addr] = True
+    for a in range(addr, addr+data):
+        emulator.memory_map[a] = True
     emulator.stack.append(into_addr)
     # print("Using memory address", into_addr)
 

@@ -35,6 +35,7 @@ class Register(Enum):
     CX = 2
     INST = 3
     FX = 4
+    OX = 5
     
 def mov(into, from_):
     return ((into.value) << 4) + (from_.value)

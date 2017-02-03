@@ -15,7 +15,7 @@ class OctoEngine:
         
         self.comparisons = {"JE":False, "JG":False, "JL":False}
         
-        self.memory = Memory()
+        self.memory = Memory(self)
         self.stack = []
         self.call_stack = []
         self.memory_map = {}
@@ -26,12 +26,14 @@ class OctoEngine:
         self.reg_counter = Register("COUNTER")
         self.instruction_register = Register("INST")
         self.reg_func = Register("FUNC")
+        self.reg_offset = Register("OFFSET")
         
         self.memory.reserve(255, self.reg_a)
         self.memory.reserve(254, self.reg_b)
         self.memory.reserve(253, self.reg_counter)
         self.memory.reserve(252, self.instruction_register)
         self.memory.reserve(251, self.reg_func)
+        self.memory.reserve(250, self.reg_offset)
         
         self.program_end = 0
 
@@ -55,7 +57,7 @@ class OctoEngine:
         instructions[instruction](self, mem_flag, stack_flag, data)
         #print(sum([1 if not b == 0 else 0 for b in self.memory.memory[self.program_end:]])/len(self.memory.memory[self.program_end:]), len(self.memory.memory[self.program_end:]), len(self.stack))
         if settings.debug:
-            print(f"Registers: A:{self.reg_a.value}, B:{self.reg_b.value}, F:{self.reg_func.value}")
+            print(f"Registers: A:{self.reg_a.value}, B:{self.reg_b.value}, F:{self.reg_func.value}, O:{self.reg_offset.value}")
             print(f"Stack: {self.stack}")
             print(f"Mem: {self.memory.memory[self.program_end:256-16]}")
             print()

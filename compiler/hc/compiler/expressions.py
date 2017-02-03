@@ -59,6 +59,14 @@ class Variable:
     
     def __repr__(self):
         return f"<Variable: {self.name}>"
+    
+class Index:
+    def __init__(self, variable, index):
+        self.variable = variable
+        self.index = index
+        
+    def __repr__(self):
+        return f"<Index: {self.variable}[{self.index}]>"
         
 class Literal:
     def __init__(self, value):

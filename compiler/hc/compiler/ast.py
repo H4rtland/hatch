@@ -230,6 +230,12 @@ class ASTParser:
             return Literal(self.previous().literal)
         
         if self.match(TokenType.IDENTIFIER):
+            if self.check(TokenType.LEFT_SQUARE):
+                variable = Variable(self.previous().lexeme)
+                self.consume(TokenType.LEFT_SQUARE)
+                index = self.term()
+                self.consume(TokenType.RIGHT_SQUARE, "Expected ']' to close index")
+                return Index(variable, index)
             return Variable(self.previous().lexeme)
         
         return Literal(1)

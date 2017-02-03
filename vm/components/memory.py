@@ -4,7 +4,8 @@ class MemoryAccessException(Exception):
     pass
 
 class Memory:
-    def __init__(self):
+    def __init__(self, vm):
+        self.vm = vm
         self.memory = [0 for i in range(0, 256)]
         self.reserved = {}
         
