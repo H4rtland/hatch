@@ -37,10 +37,12 @@ class Assign:
             
         
 class Let:
-    def __init__(self, vtype, name, initial):
+    def __init__(self, vtype, name, initial, array, length):
         self.vtype = vtype
         self.name = name
         self.initial = initial
+        self.array = array
+        self.length = length
         
     def print(self, indent=0):
         print("    "*indent + f"<Let: {self.vtype.lexeme} {self.name.lexeme} = {self.initial}>")
@@ -123,3 +125,10 @@ class For:
         
     def print(self, indent=0):
         print("    "*indent + f"<For: {self.declare}; {self.condition}; {self.action}>")
+        
+class Array:
+    def __init__(self, elements):
+        self.elements = elements
+        
+    def __repr__(self):
+        return f"<Array: {self.elements}>"

@@ -43,11 +43,12 @@ class TokenType(Enum):
     
     
 class Token:
-    def __init__(self, token_type, lexeme, literal, line):
+    def __init__(self, token_type, lexeme, literal, line, char):
         self.token_type = token_type
         self.lexeme = lexeme
         self.literal = literal
         self.line = line
+        self.char = char
         self.start = 0
     
     def __repr__(self):
@@ -86,6 +87,7 @@ class Tokenizer:
         self.position = 0
         self.line = 1
         self.tokens = []
+        self.last_newline = 0
     
     def next(self):
         self.position += 1
@@ -136,27 +138,26 @@ class Tokenizer:
                     self.next()
                 return
             elif self.peek_for("*"):
-                opened = 1
+                #opened = 1
                 while not self.at_end():
                     self.next()
-                    if self.peek(1) == "/" and self.peek(2) == "*":
-                        opened += 1
+                    #if self.peek(1) == "/" and self.peek(2) == "*":
+                    #    opened += 1
+                    if self.peek(1) == "\n":
+                        self.line += 1
                     if self.peek(1) == "*" and self.peek(2) == "/":
-                        opened -= 1
-                    if opened == 0:
+                        #opened -= 1
                         self.next()
                         self.next()
                         break
+                    #if opened == 0:
+                    #    self.next()
+                    #    self.next()
+                    #    break
                 return
             else:
                 return self.add_token(TokenType.SLASH)
-            
-        if next_char in (" ", "\r", "\t"):
-            return
-        if next_char == "\n":
-            self.line += 1
-            return
-        
+
         if next_char == '"':
             # string literal
             return self.read_string()
@@ -166,6 +167,14 @@ class Tokenizer:
         
         if next_char.isalpha() or next_char == "_":
             return self.read_identifier()
+
+        if next_char in (" ", "\r", "\t"):
+            return
+        if next_char == "\n":
+            self.line += 1
+            self.last_newline = self.position
+            return
+        
         
         print(f"Unhandled token {self.hatch_source[self.start:self.position]}")
         
@@ -211,6 +220,6 @@ class Tokenizer:
     
     def add_token(self, token_type, literal=None):
         lexeme = self.hatch_source[self.start:self.position]
-        token = Token(token_type, lexeme, literal, self.line)
+        token = Token(token_type, lexeme, literal, self.line, self.start-self.last_newline)
         self.tokens.append(token)
         return token

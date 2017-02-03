@@ -12,7 +12,11 @@ class ASTParser:
         self.had_error = False
         
     def print_error(self, token, message):
-        print(self.sourcelines[token.line-1].lstrip(), file=sys.stderr)
+        source_line = self.sourcelines[token.line-1]
+        indentsize = len(source_line) - len(source_line.lstrip())
+        source_line = source_line.lstrip()
+        print(source_line, file=sys.stderr)
+        print(" "*(token.char-indentsize) + "^", file=sys.stderr)
         print(message, file=sys.stderr)
         print("", file=sys.stderr)
         self.had_error = True
@@ -26,13 +30,17 @@ class ASTParser:
             return True
         return False
     
-    def consume(self, token_type, error_message="Unhandled error"):
+    def consume(self, token_type, error_message="Unhandled error", previous_line=False):
         if self.tokens[self.position].token_type == token_type:
             self.position += 1
             return self.tokens[self.position-1]
         
-        self.print_error(self.tokens[self.position], f"{error_message} on line {self.tokens[self.position-1].line-1}")
+        if previous_line:
+            self.print_error(self.tokens[self.position-1], f"{error_message} on line {self.tokens[self.position-1].line}")
+        else:
+            self.print_error(self.tokens[self.position], f"{error_message} on line {self.tokens[self.position].line}")
         
+        #self.position += 1
         #sys.exit(0)
         #raise Exception(f"{error_message} on line {self.tokens[self.position].line}")
     
@@ -41,7 +49,7 @@ class ASTParser:
         
     
     def at_end(self):
-        return self.tokens[self.position].token_type == TokenType.EOF
+        return self.position >= len(self.tokens) or self.tokens[self.position].token_type == TokenType.EOF
         
         
     def parse(self):
@@ -62,6 +70,8 @@ class ASTParser:
     def statement(self):
         if self.check(TokenType.LEFT_BRACE):
             return self.block()
+        if self.check(TokenType.LEFT_SQUARE):
+            return self.array()
         if self.match(TokenType.IF):
             return self.if_statement()
         if self.match(TokenType.FOR):
@@ -97,6 +107,7 @@ class ASTParser:
         self.consume(TokenType.RIGHT_BRACE, "Expected '}' to close block")
         return Block(statements)
     
+    
     def if_statement(self):
         self.consume(TokenType.LEFT_BRACKET, "Expected '(' after if")
         condition = self.expression()
@@ -111,7 +122,7 @@ class ASTParser:
             
     def expression_statement(self):
         expr = self.expression()
-        self.consume(TokenType.SEMICOLON, "Expected semicolon following expression")
+        self.consume(TokenType.SEMICOLON, "Expected semicolon following expression", previous_line=True)
         return expr
     
     def expression(self):
@@ -121,7 +132,7 @@ class ASTParser:
         expr = self.equality()
         if self.match(TokenType.EQUAL):
             value = self.assignment()
-            if (expr, Variable):
+            if isinstance(expr, Variable):
                 return Assign(expr.name, value)
         return expr
     
@@ -174,7 +185,7 @@ class ASTParser:
     
     
     def call(self):
-        expr = self.primary()
+        expr = self.array()
         while True:
             if self.match(TokenType.LEFT_BRACKET):
                 expr = self.finish_call(expr)
@@ -192,6 +203,19 @@ class ASTParser:
         paren = self.consume(TokenType.RIGHT_BRACKET, "Expected ')' to close function call")
         
         return Call(callee, paren, args)
+    
+    def array(self):
+        if self.check(TokenType.LEFT_SQUARE):
+            self.consume(TokenType.LEFT_SQUARE, "Expected '[' to open array")
+            elements = []
+            while not self.check(TokenType.RIGHT_SQUARE) and not self.at_end():
+                elements.append(self.primary())
+                if not self.match(TokenType.COMMA):
+                    break
+            self.consume(TokenType.RIGHT_SQUARE, "Expected ']' to close array")
+            return Array(elements)
+        
+        return self.primary()
         
     def primary(self):
         if self.match(TokenType.TRUE):
@@ -200,8 +224,9 @@ class ASTParser:
             return Literal(False)
         
         if self.match(TokenType.STRING, TokenType.NUMBER):
-            if not (0 <= self.previous().literal <= 255):
-                self.print_error(self.previous(), "Integer literal outside range 0-255")
+            if self.previous().token_type == TokenType.NUMBER:
+                if not (0 <= self.previous().literal <= 255):
+                    self.print_error(self.previous(), "Integer literal outside range 0-255")
             return Literal(self.previous().literal)
         
         if self.match(TokenType.IDENTIFIER):
@@ -211,12 +236,21 @@ class ASTParser:
         
     def let(self, no_semicolon=False):
         vtype = self.consume(TokenType.IDENTIFIER, "Expected variable type")
+        is_array = False
+        array_length = 1
+        if self.check(TokenType.LEFT_SQUARE):
+            is_array = True
+            self.consume(TokenType.LEFT_SQUARE)
+            #array_length = self.consume(TokenType.NUMBER, "Expected array length")
+            array_length = self.primary()
+            self.consume(TokenType.RIGHT_SQUARE, "Expected closing square bracket")
         name = self.consume(TokenType.IDENTIFIER, "Expected variable name")
         self.consume(TokenType.EQUAL, "Expected '=' in let statement")
         initial = self.expression()
         if not no_semicolon:
             self.consume(TokenType.SEMICOLON, "Expected semicolon following let statement")
-        return Let(vtype, name, initial)
+        branch = Let(vtype, name, initial, is_array, array_length)
+        return branch
     
     def return_statement(self):
         value = None
