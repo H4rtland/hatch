@@ -28,6 +28,7 @@ class Instruction(Enum):
     JL =    0b11000
     JGE =   0b11001
     JLE =   0b11010
+    OFF =   0b11011
     
 class Register(Enum):
     AX = 0

@@ -205,6 +205,14 @@ def JLE(emulator, mem_flag, stack_flag, data):
     if emulator.comparisons["JLE"]:
         emulator.instruction_register.load(data)
         
+def OFF(emulator, mem_flag, stack_flag, data):
+    if mem_flag:
+        emulator.reg_offset.load(emulator.memory[data])
+    elif stack_flag:
+        emulator.reg_offset.load(emulator.memory[emulator.stack[-data]+emulator.reg_offset.value])
+    else:
+        emulator.reg_offset.load(data)
+        
 instructions = {
     0b00000: NOP,
     0b00001: LDA,
@@ -233,6 +241,7 @@ instructions = {
     0b11000: JL,
     0b11001: JGE,
     0b11010: JLE,
+    0b11011: OFF,
 }
 
 class InstructionException(Exception):

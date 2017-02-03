@@ -153,15 +153,17 @@ class Assembler:
     def parse_index(self, namespace, variable, index):
         print(variable, index)
         if isinstance(index, Literal):
-            self.add_instruction(Instruction.LDB, index.value+1)
-            self.add_instruction(Instruction.MOV, mov(Register.OX, Register.BX))
+            #self.add_instruction(Instruction.LDB, index.value+1)
+            #self.add_instruction(Instruction.MOV, mov(Register.OX, Register.BX))
+            self.add_instruction(Instruction.OFF, index.value+1)
         if isinstance(index, Variable):
             self.add_instruction(Instruction.LDB, self.memory.id_on_stack(namespace.get_namespace()[index.name]), stack_flag=True)
             self.add_instruction(Instruction.INC, 255-Register.BX.value)
             self.add_instruction(Instruction.MOV, mov(Register.OX, Register.BX))
         self.add_instruction(Instruction.LDA, self.memory.id_on_stack(namespace.get_namespace()[variable.name]), stack_flag=True)
-        self.add_instruction(Instruction.LDB, 0)
-        self.add_instruction(Instruction.MOV, mov(Register.OX, Register.BX))
+        #self.add_instruction(Instruction.LDB, 0)
+        #self.add_instruction(Instruction.MOV, mov(Register.OX, Register.BX))
+        self.add_instruction(Instruction.OFF, 0)
         
     
     def parse_comparison(self, namespace, condition):
@@ -248,20 +250,23 @@ class Assembler:
             
             for i, element in enumerate(statement.initial.elements):
                 if isinstance(element, Literal):
-                    self.add_instruction(Instruction.LDB, i+1)
-                    self.add_instruction(Instruction.MOV, mov(Register.OX, Register.BX))
+                    #self.add_instruction(Instruction.LDB, i+1)
+                    #self.add_instruction(Instruction.MOV, mov(Register.OX, Register.BX))
+                    self.add_instruction(Instruction.OFF, i+1)
                     self.add_instruction(Instruction.LDA, element.value)
                     self.add_instruction(Instruction.STA, 1, stack_flag=True)
                 elif isinstance(element, Variable):
                     self.add_instruction(Instruction.LDA, self.memory.id_on_stack(namespace.get_namespace()[element.name]), stack_flag=True)
-                    self.add_instruction(Instruction.LDB, i+1)
-                    self.add_instruction(Instruction.MOV, mov(Register.OX, Register.BX))
+                    #self.add_instruction(Instruction.LDB, i+1)
+                    #self.add_instruction(Instruction.MOV, mov(Register.OX, Register.BX))
+                    self.add_instruction(Instruction.OFF, i+1)
                     self.add_instruction(Instruction.STA, 1, stack_flag=True)
                 else:
                     raise Exception("Unhandled array element")
                 
-                self.add_instruction(Instruction.LDB, 0)
-                self.add_instruction(Instruction.MOV, mov(Register.OX, Register.BX))
+                #self.add_instruction(Instruction.LDB, 0)
+                #self.add_instruction(Instruction.MOV, mov(Register.OX, Register.BX))
+                self.add_instruction(Instruction.OFF, 0)
                     
         else:
             raise Exception("Unhandled let statement")
