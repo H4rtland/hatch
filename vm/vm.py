@@ -59,7 +59,9 @@ class OctoEngine:
         if settings.debug:
             print(f"Registers: A:{self.reg_a.value}, B:{self.reg_b.value}, F:{self.reg_func.value}, O:{self.reg_offset.value}")
             print(f"Stack: {self.stack}")
-            print(f"Mem: {self.memory.memory[self.program_end:256-16]}")
+            length = 256-16-self.program_end
+            length = min(20, length)
+            print(f"Mem: {self.memory.memory[self.program_end:self.program_end+length]}")
             print()
         
     def run(self):

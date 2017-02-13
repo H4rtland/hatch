@@ -92,6 +92,8 @@ class Assembler:
             self.add_instruction(Instruction.MOV, mov(Register.AX, Register.FX)) # MOV AX <- FX
         elif isinstance(binary.left, Binary):
             self.parse_binary(namespace, binary.left)
+        elif isinstance(binary.left, Index):
+            self.parse_index(namespace, binary.left.variable, binary.left.index, register=Register.AX)
         else:
             raise Exception("Unhandled binary left input")
         
@@ -104,6 +106,8 @@ class Assembler:
             self.parse_call(namespace, binary.right.callee, binary.right.args)
             # move function return value into BX
             self.add_instruction(Instruction.MOV, mov(Register.BX, Register.FX)) # MOV BX <- FX
+        elif isinstance(binary.right, Index):
+            self.parse_index(namespace, binary.right.variable, binary.right.index, register=Register.BX)
         else:
             raise Exception("Unhandled binary right input")
             
@@ -150,17 +154,26 @@ class Assembler:
         self.memory.temp_extra_stack_vars -= extra_stack_vars
         self.add_instruction(Instruction.CALL, FunctionAddress(func)) # CALL function_start
         
-    def parse_index(self, namespace, variable, index):
-        print(variable, index)
+    def parse_index(self, namespace, variable, index, register=Register.AX):
         if isinstance(index, Literal):
             #self.add_instruction(Instruction.LDB, index.value+1)
             #self.add_instruction(Instruction.MOV, mov(Register.OX, Register.BX))
             self.add_instruction(Instruction.OFF, index.value+1)
-        if isinstance(index, Variable):
-            self.add_instruction(Instruction.LDB, self.memory.id_on_stack(namespace.get_namespace()[index.name]), stack_flag=True)
-            self.add_instruction(Instruction.INC, 255-Register.BX.value)
-            self.add_instruction(Instruction.MOV, mov(Register.OX, Register.BX))
-        self.add_instruction(Instruction.LDA, self.memory.id_on_stack(namespace.get_namespace()[variable.name]), stack_flag=True)
+        elif isinstance(index, Variable):
+            load_inst = {
+                Register.AX: Instruction.LDA,
+                Register.BX: Instruction.LDB,
+            }[register]
+            self.add_instruction(load_inst, self.memory.id_on_stack(namespace.get_namespace()[index.name]), stack_flag=True)
+            self.add_instruction(Instruction.INC, 255-register.value)
+            self.add_instruction(Instruction.MOV, mov(Register.OX, register))
+        else:
+            raise Exception("Unhandled index get")
+        load_inst = {
+            Register.AX: Instruction.LDA,
+            Register.BX: Instruction.LDB,
+        }[register]
+        self.add_instruction(load_inst, self.memory.id_on_stack(namespace.get_namespace()[variable.name]), stack_flag=True)
         #self.add_instruction(Instruction.LDB, 0)
         #self.add_instruction(Instruction.MOV, mov(Register.OX, Register.BX))
         self.add_instruction(Instruction.OFF, 0)
@@ -256,6 +269,7 @@ class Assembler:
                     self.add_instruction(Instruction.LDA, element.value)
                     self.add_instruction(Instruction.STA, 1, stack_flag=True)
                 elif isinstance(element, Variable):
+                    self.add_instruction(Instruction.OFF, 0)
                     self.add_instruction(Instruction.LDA, self.memory.id_on_stack(namespace.get_namespace()[element.name]), stack_flag=True)
                     #self.add_instruction(Instruction.LDB, i+1)
                     #self.add_instruction(Instruction.MOV, mov(Register.OX, Register.BX))
@@ -266,7 +280,9 @@ class Assembler:
                 
                 #self.add_instruction(Instruction.LDB, 0)
                 #self.add_instruction(Instruction.MOV, mov(Register.OX, Register.BX))
-                self.add_instruction(Instruction.OFF, 0)
+            
+            self.add_instruction(Instruction.OFF, 0)
+                
                     
         else:
             raise Exception("Unhandled let statement")
@@ -287,6 +303,28 @@ class Assembler:
             self.add_instruction(Instruction.STA, self.memory.id_on_stack(namespace.get_namespace()[statement.name]), stack_flag=True, mem_flag=True) # STA func_return
         else:
             raise Exception("Unhandled assign statement")
+        
+    def parse_assign_index(self, namespace, statement):
+        if isinstance(statement.right, Literal):
+            self.add_instruction(Instruction.LDA, statement.right.value)
+        elif isinstance(statement.right, Variable):
+            self.add_instruction(Instruction.LDA, self.memory.id_on_stack(namespace.get_namespace()[statement.right.name]), stack_flag=True)
+        else:
+            raise Exception("Unhandled index assign value")
+        
+        if isinstance(statement.left.index, Literal):
+            index = statement.left.index.value
+            self.add_instruction(Instruction.OFF, index+1)
+        elif isinstance(statement.left.index, Variable):
+            self.add_instruction(Instruction.LDB, self.memory.id_on_stack(namespace.get_namespace()[statement.left.index.name]), stack_flag=True)
+            self.add_instruction(Instruction.INC, 255-Register.BX.value)
+            self.add_instruction(Instruction.MOV, mov(Register.OX, Register.BX))
+        else:
+            raise Exception("Unhandled index assign index")
+        
+        self.add_instruction(Instruction.STA, self.memory.id_on_stack(namespace.get_namespace()[statement.left.variable.name]), stack_flag=True)
+        self.add_instruction(Instruction.OFF, 0)
+        
         
     def parse_for(self, namespace, statement):
         # comparison used to jump to end of loop
@@ -332,6 +370,9 @@ class Assembler:
             
             elif isinstance(statement, Assign):
                 self.parse_assign(namespace, statement)
+                
+            elif isinstance(statement, AssignIndex):
+                self.parse_assign_index(namespace, statement)
                         
             
             elif isinstance(statement, Call):

@@ -34,6 +34,17 @@ class Assign:
     
     def __repr__(self):
         return f"<Assign: {self.name} = {self.value}>"
+    
+class AssignIndex:
+    def __init__(self, left, right):
+        self.left = left
+        self.right = right
+        
+    def __repr__(self):
+        return f"<AssignIndex: {self.left.variable}[{self.left.index}] = {self.right}>"
+    
+    def print(self, indent=0):
+        print("    "*indent + f"<AssignIndex: {self.left.variable.name}[{self.left.index}] = {self.right}>")
             
         
 class Let:

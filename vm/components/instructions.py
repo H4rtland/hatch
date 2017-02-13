@@ -10,14 +10,15 @@ def debug(function):
 def debug_addr(function):
     def wrapper(*args, **kwargs):
         if INSTRUCTION_DEBUG:
-            print(f"Instruction m={args[1]}, {function.__name__}, [{args[2]}]")
+            print(f"Instruction {function.__name__} mem_flag={args[1]}, stack_flag={args[2]}, data={args[3]}")
         function(*args, **kwargs)
     return wrapper
 
 def debug_addr_data(function):
     def wrapper(*args, **kwargs):
         if INSTRUCTION_DEBUG:
-            print(f"Instruction m={args[1]}, {function.__name__}, [{args[2]}] -> ({args[0].memory[args[2]]})")
+            print(f"Instruction {function.__name__} mem_flag={args[1]}, stack_flag={args[2]}, data={args[3]}")
+            #print(f"Instruction m={args[1]}, {function.__name__}, [{args[2]}] -> ({args[0].memory[args[2]]})")
         function(*args, **kwargs)
     return wrapper
 
@@ -25,7 +26,8 @@ def debug_addr_data_store(function):
     def wrapper(*args, **kwargs):
         function(*args, **kwargs)
         if INSTRUCTION_DEBUG:
-            print(f"Instruction m={args[1]}, {function.__name__}, [{args[2]}] <- ({args[0].memory[args[2]]})")
+            print(f"Instruction {function.__name__} mem_flag={args[1]}, stack_flag={args[2]}, data={args[3]}")
+            #print(f"Instruction m={args[1]}, {function.__name__}, [{args[2]}] <- ({args[0].memory[args[2]]})")
     return wrapper
         
 
@@ -204,7 +206,8 @@ def JGE(emulator, mem_flag, stack_flag, data):
 def JLE(emulator, mem_flag, stack_flag, data):
     if emulator.comparisons["JLE"]:
         emulator.instruction_register.load(data)
-        
+
+@debug_addr_data
 def OFF(emulator, mem_flag, stack_flag, data):
     if mem_flag:
         emulator.reg_offset.load(emulator.memory[data])

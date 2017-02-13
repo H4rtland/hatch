@@ -4,7 +4,7 @@ from compiler.tokenizer import Tokenizer
 from compiler.ast import ASTParser
 from compiler.assembler import Assembler
 
-def compile(source):
+def compile(source, debug=False):
     tokenizer = Tokenizer(source)
     tokens = tokenizer.tokenize()
     
@@ -14,8 +14,9 @@ def compile(source):
     if error:
         sys.exit()
     
-    for trunk in tree:
-        trunk.print()
+    if debug:
+        for trunk in tree:
+            trunk.print()
         
     assembler = Assembler(tree)
     instructions = assembler.assemble()
@@ -26,7 +27,7 @@ if __name__ == "__main__":
     with open("testfile.hatch", "r") as test_file:
         source = test_file.read()
 
-    instructions = compile(source)
+    instructions = compile(source, True)
     
     with open("testfile.hb", "wb") as output_file:
         output_file.write(bytes(instructions))

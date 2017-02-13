@@ -11,15 +11,23 @@ function void print(int n) {
     __internal_print(n);
 }
 
+function int sum(int a, int b) {
+    return a + b;
+}
+
 function void main() {
-    let int x = 52;
-    let int index = 0;
-    let int[5] array = [51, x, 53, 54, 55];
-    array[4] = 60;
-    array[index] = 0;
-    for (let int i=0; i<5; i=i+1) {
-        print(array[i]);
-    }
+    let int[5] array = [11, 22, 33, 44, 55];
+    print(array[1]+1);
+    print(array[2]-2);
+
+    print(sum(array[0], array[1]));
+
+    print(1+sum(6, 7));
+    print(sum(6, 7)+1);
+
+    let int x = 43;
+    print(x+5);
+    print(x-5);
 }
 """
 
@@ -29,4 +37,4 @@ def test_for():
     virtual_machine = vm.OctoEngine(True)
     virtual_machine.load(instructions)
     output = virtual_machine.run()
-    assert output == [0, 52, 53, 54, 60]
+    assert output == [23, 31, 33, 14, 14, 48, 38]

@@ -134,6 +134,8 @@ class ASTParser:
             value = self.assignment()
             if isinstance(expr, Variable):
                 return Assign(expr.name, value)
+            if isinstance(expr, Index):
+                return AssignIndex(expr, value)
         return expr
     
     def equality(self):
