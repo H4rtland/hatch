@@ -116,6 +116,10 @@ class Assembler:
             self.add_instruction(Instruction.ADD, 0) # ADD
         elif binary.operator.token_type == TokenType.MINUS:
             self.add_instruction(Instruction.NEG, 0) # NEG
+        elif binary.operator.token_type == TokenType.STAR:
+            self.add_instruction(Instruction.MUL, 0)
+        elif binary.operator.token_type == TokenType.SLASH:
+            self.add_instruction(Instruction.DIV, 0)
         else:
             raise Exception("Unhandled binary operator")
             

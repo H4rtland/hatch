@@ -216,6 +216,14 @@ def OFF(emulator, mem_flag, stack_flag, data):
     else:
         emulator.reg_offset.load(data)
         
+@debug
+def MUL(emulator, mem_flag, stack_flag, data):
+    emulator.reg_a *= emulator.reg_b
+    
+@debug
+def DIV(emulator, mem_flag, stack_flag, data):
+    emulator.reg_a //= emulator.reg_b
+        
 instructions = {
     0b00000: NOP,
     0b00001: LDA,
@@ -245,6 +253,8 @@ instructions = {
     0b11001: JGE,
     0b11010: JLE,
     0b11011: OFF,
+    0b11100: MUL,
+    0b11101: DIV,
 }
 
 class InstructionException(Exception):

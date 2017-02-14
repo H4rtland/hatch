@@ -41,6 +41,38 @@ class Register:
         self.load((-self.stored_value & 0b11111111) - 1)
         return self
     
+    def __mul__(self, other):
+        if not type(other) in (int, Register):
+            raise RegisterException(f"Addition wasn't an int or other register ({type(other).__name__}: {other})")
+        if type(other) is int:
+            self.stored_value *= other
+        elif type(other) is Register:
+            self.stored_value *= other.value
+        
+        if self.stored_value > 255:
+            self.stored_value %= 255
+        elif self.stored_value < 0:
+            self.stored_value = (self.stored_value % 255) + 1
+        return self
+    
+    def __truediv__(self, other):
+        self.__floordiv__(other)
+    
+    def __floordiv__(self, other):
+        if not type(other) in (int, Register):
+            raise RegisterException(f"Addition wasn't an int or other register ({type(other).__name__}: {other})")
+        if type(other) is int:
+            self.stored_value //= other
+        elif type(other) is Register:
+            self.stored_value //= other.value
+        
+        if self.stored_value > 255:
+            self.stored_value %= 255
+        elif self.stored_value < 0:
+            self.stored_value = (self.stored_value % 255) + 1
+        return self
+        
+    
     def __and__(self, other):
         return self.value & other
     
