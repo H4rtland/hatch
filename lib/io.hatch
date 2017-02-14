@@ -1,0 +1,3 @@
+function void print(int n) {
+    __internal_print(n);
+}
