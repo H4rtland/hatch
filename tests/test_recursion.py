@@ -8,9 +8,7 @@ sys.path.append("../vm")
 import vm
 
 hatch = """
-function void print(int n) {
-    __internal_print(n);
-}
+import io;
 
 function int triangle_number(int n) {
     if (n == 1) {

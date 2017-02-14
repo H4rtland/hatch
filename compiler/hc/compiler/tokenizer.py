@@ -40,6 +40,7 @@ class TokenType(Enum):
     FALSE = auto()
     LET = auto()
     FUNCTION = auto()
+    IMPORT = auto()
     
     
 class Token:
@@ -79,6 +80,7 @@ KEYWORDS = {
     "false": TokenType.FALSE,
     "let": TokenType.LET,
     "function": TokenType.FUNCTION,
+    "import": TokenType.IMPORT,
 }
     
 class Tokenizer:
@@ -209,12 +211,13 @@ class Tokenizer:
             return self.add_token(KEYWORDS[name])
         return self.add_token(TokenType.IDENTIFIER)
     
-    def tokenize(self):
+    def tokenize(self, main=True):
         while self.position < len(self.hatch_source):
             self.start = self.position
             token = self.next_token()
         
-        self.add_token(TokenType.EOF)
+        if main:
+            self.add_token(TokenType.EOF)
         
         return self.tokens
     

@@ -8,9 +8,7 @@ sys.path.append("../vm")
 import vm
 
 hatch = """
-function void print(int n) {
-    __internal_print(n);
-}
+import io;
 
 function int main() {
     for(let int i=0; i<10; i=i+1) {

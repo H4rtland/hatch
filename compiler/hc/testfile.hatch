@@ -1,7 +1,5 @@
-function void print(int n) {
-    __internal_print(n);
-}
+import io;
 
 function void main() {
-    print(5*4);
+    print(5);
 }

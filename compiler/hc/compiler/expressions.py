@@ -85,6 +85,9 @@ class Literal:
     
     def __repr__(self):
         return f"<Literal: {self.value}>"
+    
+    def print(self, indent=0):
+        print("    "*indent + f"<Literal {self.value}>")
 
 class If:
     def __init__(self, condition, then, otherwise):

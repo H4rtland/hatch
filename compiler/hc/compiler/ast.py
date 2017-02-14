@@ -1,15 +1,19 @@
 import sys
+import os
+import os.path as op
 
-from compiler.tokenizer import TokenType
+from compiler.tokenizer import TokenType, Tokenizer
 from compiler.expressions import *
 
 class ASTParser:
-    def __init__(self, tokens, source):
+    def __init__(self, tokens, source, filename, compiler):
         self.tokens = tokens
         self.sourcelines = source.split("\n")
         self.position = 0
         self.statements = []
         self.had_error = False
+        self.filename = filename
+        self.compile, self.compile_file = compiler
         
     def print_error(self, token, message):
         source_line = self.sourcelines[token.line-1]
@@ -36,9 +40,11 @@ class ASTParser:
             return self.tokens[self.position-1]
         
         if previous_line:
-            self.print_error(self.tokens[self.position-1], f"{error_message} on line {self.tokens[self.position-1].line}")
+            token, line_num = self.tokens[self.position-1], self.tokens[self.position-1].line
         else:
-            self.print_error(self.tokens[self.position], f"{error_message} on line {self.tokens[self.position].line}")
+            token, line_num = self.tokens[self.position], self.tokens[self.position].line
+        
+        self.print_error(token, f"{error_message} on line {line_num} in file {self.filename}")
         
         #self.position += 1
         #sys.exit(0)
@@ -46,6 +52,9 @@ class ASTParser:
     
     def previous(self):
         return self.tokens[self.position-1]
+    
+    def insert(self, tokens):
+        self.tokens[self.position:self.position] = tokens
         
     
     def at_end(self):
@@ -54,12 +63,16 @@ class ASTParser:
         
     def parse(self):
         while not self.at_end():
-            self.statements.append(self.declaration())
+            next_token = self.declaration()
+            if not next_token is None:
+                self.statements.append(next_token)
         return self.statements, self.had_error
     
     def declaration(self, no_let_semicolon=False):
         if self.match(TokenType.FUNCTION):
             return self.function()
+        if self.match(TokenType.IMPORT):
+            return self.import_statement()
         if self.match(TokenType.LET):
             return self.let(no_let_semicolon)
         if self.match(TokenType.RETURN):
@@ -78,6 +91,32 @@ class ASTParser:
             return self.for_()
         
         return self.expression_statement()
+    
+    def find_lib(self, filename):
+        locations = [".", "../lib", "../../lib"]
+        for location in locations:
+            if op.exists(location):
+                if op.exists(op.join(location, filename)):
+                    return location
+    
+    def import_statement(self):
+        name = self.consume(TokenType.IDENTIFIER, "Expected module name")
+        self.consume(TokenType.SEMICOLON, "Expected semicolon following import")
+        
+        filename = name.lexeme + ".hatch"
+        cwd = os.getcwd()
+        os.chdir(self.find_lib(filename))
+        
+        if op.exists(filename):
+            with open(filename, "r") as import_file:
+                source = import_file.read()
+            tokenizer = Tokenizer(source)
+            tokens = tokenizer.tokenize(main=False)
+            self.insert(tokens)
+        else:
+            self.print_error(name, f"Could not find module {name.lexeme}")
+            
+        os.chdir(cwd)
     
     def function(self):
         rtype = self.consume(TokenType.IDENTIFIER, "Expected function return type")
