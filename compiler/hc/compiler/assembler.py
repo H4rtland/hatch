@@ -22,7 +22,7 @@ class Assembler:
         self.memory = MemoryModel()
 
         self.globals = Namespace(None, self.memory)
-        self.globals.globals = {"__internal_print":0}
+        self.globals.globals = {"__internal_print":0, "__internal_print_char":0}
         self.function_addresses = {"main":0}
         self.function_return_addresses = {}
         self.main = None
@@ -47,6 +47,10 @@ class Assembler:
         if stack_flag:
             # set stack lookup bit
             inst = 0b0100_0000 | inst
+        assert 0 <= inst <= 255
+        assert inst != 33
+        if isinstance(data, int):
+            assert 0 <= data <= 255
         self.instructions += [inst, data]
         return len(self.instructions) - 2
     
@@ -62,21 +66,49 @@ class Assembler:
     def assemble(self):
         self.parse(Namespace(self.globals, self.memory), self.main.body)
         self.add_instruction(Instruction.HLT, 0) # HLT
-        for function in self.non_main_functions:
-            self.function_addresses[function.name.lexeme] = len(self.instructions)
-            namespace = Namespace(self.globals, self.memory)
-            for arg in function.args:
-                namespace.let(arg[1].lexeme, 1, arg[0].lexeme)
-            self.parse(namespace, function.body, is_function=True)
-            self.function_return_addresses[function.name.lexeme] = len(self.instructions)-1
+        
+        while True:
+            if all(isinstance(inst, int) for inst in self.instructions):
+                # no more functions left to compile
+                break
+            names = []
+            functions_remaining = []
+            for instruction in self.instructions:
+                if isinstance(instruction, FunctionAddress):
+                    if instruction.func_name.name not in names:
+                        functions_remaining.append(instruction)
+                        names.append(instruction.func_name.name)
+            for func_address in functions_remaining:
+                for function in self.non_main_functions:
+                    if function.name.lexeme in self.function_return_addresses:
+                        continue
+                    if func_address.func_name.name == function.name.lexeme:
+                        self.function_addresses[function.name.lexeme] = len(self.instructions)
+                        namespace = Namespace(self.globals, self.memory)
+                        for arg in function.args:
+                            namespace.let(arg[1].lexeme, 1, arg[0].lexeme)
+                        self.parse(namespace, function.body, is_function=True)
+                        self.function_return_addresses[function.name.lexeme] = len(self.instructions)-1
+                for i, inst in enumerate(self.instructions):
+                    if isinstance(inst, FunctionAddress):
+                        if inst.func_name.name == func_address.func_name.name:
+                            self.instructions[i] = self.function_addresses[inst.func_name.name]
         
         data_start = len(self.instructions)
         for index, inst in enumerate(self.instructions):
             if isinstance(inst, DataAddress):
+                if inst.addr + data_start > 255:
+                    raise Exception(f"{inst.addr+data_start}")
                 self.instructions[index] = inst.addr + data_start
             if isinstance(inst, FunctionAddress):
+                #if self.function_addresses[inst.func_name.name] > 255:
+                #    raise Exception(f"{inst.func_name.name} = {self.function_addresses[inst.func_name.name]}")
                 self.instructions[index] = self.function_addresses[inst.func_name.name]
         
+        if len(self.instructions) > 255-16:
+            raise Exception(f"Instructions exceeded max memory size: {len(self.instructions)}")
+        if not all([(0 <= x <= 255) for x in self.instructions]):
+            raise Exception("Overflowed value in output instructions")
         return self.instructions
     
     
@@ -135,9 +167,12 @@ class Assembler:
                 self.add_instruction(Instruction.LDA, arg.value) # LDA value
                 self.add_instruction(Instruction.STA, 1, stack_flag=True)
             elif isinstance(arg, Variable):
-                self.add_instruction(Instruction.LDA, self.memory.id_on_stack(namespace.get_namespace()[arg.name]), stack_flag=True)
-                self.add_instruction(Instruction.PUSH, 1)
-                self.add_instruction(Instruction.STA, 1, stack_flag=True)
+                if namespace.get_type(arg.name) == "string":
+                    self.add_instruction(Instruction.DUP, self.memory.id_on_stack(namespace.get_namespace()[arg.name]))
+                else:
+                    self.add_instruction(Instruction.LDA, self.memory.id_on_stack(namespace.get_namespace()[arg.name]), stack_flag=True)
+                    self.add_instruction(Instruction.PUSH, 1)
+                    self.add_instruction(Instruction.STA, 1, stack_flag=True)
             elif isinstance(arg, Binary):
                 self.parse_binary(namespace, arg)
                 self.add_instruction(Instruction.PUSH, 1)
@@ -387,6 +422,14 @@ class Assembler:
                         if not arg.name in namespace.get_namespace():
                             raise Exception(f"Call with uninitialised variable {arg.name}")
                         self.add_instruction(Instruction.PRX, self.memory.id_on_stack(namespace.get_namespace()[arg.name]), stack_flag=True) # PRX var
+                elif statement.callee.name == "__internal_print_char":
+                    for arg in statement.args:
+                        if isinstance(arg, Literal):
+                            self.add_instruction(Instruction.PRC, arg.value)
+                        else:
+                            if not arg.name in namespace.get_namespace():
+                                raise Exception(f"Call with uninitialised variable {arg.name}")
+                            self.add_instruction(Instruction.PRC, self.memory.id_on_stack(namespace.get_namespace()[arg.name]), stack_flag=True) # PRX var
                 else:
                     self.parse_call(namespace, statement.callee, statement.args)
                     
@@ -422,13 +465,13 @@ class Assembler:
         # local variables are freed at the end of a block
         if not already_popped:
             if is_function:
-                if len(namespace.get_namespace(True)) > 0:
-                    self.add_instruction(Instruction.POP, len(namespace.get_namespace(True)))
+                if len(namespace.get_namespace(no_globals=True)) > 0:
+                    self.add_instruction(Instruction.FREE, len(namespace.get_namespace(True)))
                 self.add_instruction(Instruction.RET, 0)
             else:
                 if len(namespace.locals) > 0:
                     self.memory.unstack(len(namespace.locals))
-                    self.add_instruction(Instruction.POP, len(namespace.locals))
+                    self.add_instruction(Instruction.FREE, len(namespace.locals))
                 
         #for name in namespace.locals:
         #    self.memory.free(namespace.locals[name])

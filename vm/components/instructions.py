@@ -37,7 +37,9 @@ def NOP(emulator, mem_flag, stack_flag, data):
 
 @debug_addr_data
 def LDA(emulator, mem_flag, stack_flag, data):
-    if mem_flag:
+    if mem_flag and stack_flag:
+        emulator.reg_a.load(emulator.stack[-data]+emulator.reg_offset.value)
+    elif mem_flag:
         emulator.reg_a.load(emulator.memory[data])
     elif stack_flag:
         emulator.reg_a.load(emulator.memory[emulator.stack[-data]+emulator.reg_offset.value])
@@ -46,7 +48,9 @@ def LDA(emulator, mem_flag, stack_flag, data):
 
 @debug_addr_data
 def LDB(emulator, mem_flag, stack_flag, data):
-    if mem_flag:
+    if mem_flag and stack_flag:
+        emulator.reg_b.load(emulator.stack[-data]+emulator.reg_offset.value)
+    elif mem_flag:
         emulator.reg_b.load(emulator.memory[data])
     elif stack_flag:
         emulator.reg_b.load(emulator.memory[emulator.stack[-data]+emulator.reg_offset.value])
@@ -173,8 +177,6 @@ def PUSH(emulator, mem_flag, stack_flag, data):
 
 @debug_addr_data
 def POP(emulator, mem_flag, stack_flag, data):
-    for i in range(0, data):
-        emulator.memory_map[emulator.stack[-(i+1)]] = False
     emulator.stack = emulator.stack[:-data]
 
 @debug
@@ -223,12 +225,29 @@ def MUL(emulator, mem_flag, stack_flag, data):
 @debug
 def DIV(emulator, mem_flag, stack_flag, data):
     emulator.reg_a //= emulator.reg_b
+    
+@debug
+def PRC(emulator, mem_flag, stack_flag, data):
+    if stack_flag:
+        to_print = str(bytes([emulator.memory[emulator.stack[-data]+emulator.reg_offset.value],]), "utf8")
+        if not emulator.redirect_output:
+            print(to_print, end="")
+        emulator.output.append(to_print)
+        
+    
+def DUP(emulator, mem_flag, stack_flag, data):
+    emulator.stack.append(emulator.stack[-data])
+    
+def FREE(emulator, mem_flag, stack_flag, data):
+    for i in range(0, data):
+        emulator.memory_map[emulator.stack[-(i+1)]] = False
+    emulator.stack = emulator.stack[:-data]
         
 instructions = {
     0b00000: NOP,
     0b00001: LDA,
     0b00010: LDB,
-    0b00011: PRA,
+    0b00011: FREE,
     0b00100: PRB,
     0b00101: ADD,
     0b00110: HLT,
@@ -255,6 +274,8 @@ instructions = {
     0b11011: OFF,
     0b11100: MUL,
     0b11101: DIV,
+    0b11110: PRC,
+    0b11111: DUP,
 }
 
 class InstructionException(Exception):

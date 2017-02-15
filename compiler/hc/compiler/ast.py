@@ -125,9 +125,13 @@ class ASTParser:
         args = []
         arg_num = 0
         while not self.check(TokenType.RIGHT_BRACKET):
+            reference = False
             arg_type = self.consume(TokenType.IDENTIFIER, f"Expected type for arg {arg_num}")
+            if self.check(TokenType.AMPERSAND):
+                self.consume(TokenType.AMPERSAND)
+                reference = True
             arg_name = self.consume(TokenType.IDENTIFIER, f"Expected name for arg {arg_num}")
-            args.append((arg_type, arg_name))
+            args.append((arg_type, arg_name, reference))
             if self.check(TokenType.RIGHT_BRACKET):
                 break
             self.consume(TokenType.COMMA, "Comma expected in function args after arg{arg_num}")
@@ -294,6 +298,10 @@ class ASTParser:
         name = self.consume(TokenType.IDENTIFIER, "Expected variable name")
         self.consume(TokenType.EQUAL, "Expected '=' in let statement")
         initial = self.expression()
+        if vtype.lexeme == "string":
+            is_array = True
+            array_length = Literal(len(initial.value))
+            initial = Array([Literal(byte) for byte in list(bytes(initial.value, "utf8"))])
         if not no_semicolon:
             self.consume(TokenType.SEMICOLON, "Expected semicolon following let statement")
         branch = Let(vtype, name, initial, is_array, array_length)

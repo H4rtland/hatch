@@ -41,6 +41,7 @@ class TokenType(Enum):
     LET = auto()
     FUNCTION = auto()
     IMPORT = auto()
+    AMPERSAND = auto()
     
     
 class Token:
@@ -68,6 +69,7 @@ SINGLE_CHARS = {
     "+": TokenType.PLUS,
     "*": TokenType.STAR,
     ";": TokenType.SEMICOLON,
+    "&": TokenType.AMPERSAND,
 }
 
 KEYWORDS = {

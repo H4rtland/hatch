@@ -46,7 +46,7 @@ class OctoEngine:
         
         
     def instruction_cycle(self):
-        instruction = self.memory[self.instruction_register.value] & 0b0011_1111
+        instruction = self.memory[self.instruction_register.value] & 0b0001_1111
         if not instruction in instructions:
             raise InstructionException(f"Undefined instruction: {instruction} at memory address {self.instruction_register.value}")
         mem_flag = (self.memory[self.instruction_register.value] & 0b1000_0000) >> 7

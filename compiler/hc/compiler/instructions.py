@@ -4,7 +4,7 @@ class Instruction(Enum):
     NOP =   0b00000
     LDA =   0b00001
     LDB =   0b00010
-    PRA =   0b00011
+    FREE =  0b00011
     PRB =   0b00100
     ADD =   0b00101
     HLT =   0b00110
@@ -31,6 +31,8 @@ class Instruction(Enum):
     OFF =   0b11011
     MUL =   0b11100
     DIV =   0b11101
+    PRC =   0b11110
+    DUP =   0b11111
     
 class Register(Enum):
     AX = 0

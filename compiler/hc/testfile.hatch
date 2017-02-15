@@ -1,5 +1,6 @@
 import io;
 
 function void main() {
-    print(5);
+    let string hello = "Hello, world!";
+    print_string(hello);
 }
