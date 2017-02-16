@@ -25,6 +25,7 @@ class Assembler:
         self.globals.globals = {"__internal_print":0, "__internal_print_char":0}
         self.function_addresses = {"main":0}
         self.function_return_addresses = {}
+        self.function_names = []
         self.main = None
         self.non_main_functions = []
         for branch in self.ast:
@@ -34,6 +35,7 @@ class Assembler:
                 else:
                     self.globals.globals[branch.name.lexeme] = 0
                     self.non_main_functions.append(branch)
+                    self.function_names.append(branch.name.lexeme)
         if self.main is None:
             raise Exception("No main function found")
         
@@ -190,8 +192,14 @@ class Assembler:
                 raise Exception("Unhandled function argument")
             extra_stack_vars += 1
             self.memory.temp_extra_stack_vars += 1
+        
+        if isinstance(func, int):
+            stack_value = func + self.memory.temp_extra_stack_vars - 1
+            self.add_instruction(Instruction.CALL, stack_value, stack_flag=True)
+        else:
+            self.add_instruction(Instruction.CALL, FunctionAddress(func)) # CALL function_start
+        
         self.memory.temp_extra_stack_vars -= extra_stack_vars
-        self.add_instruction(Instruction.CALL, FunctionAddress(func)) # CALL function_start
         
     def parse_index(self, namespace, variable, index, register=Register.AX):
         if isinstance(index, Literal):
@@ -337,9 +345,21 @@ class Assembler:
             self.parse_binary(namespace, statement.value)
             self.add_instruction(Instruction.STA, self.memory.id_on_stack(namespace.get_namespace()[statement.name]), stack_flag=True, mem_flag=True) # STA [var_name]
         elif isinstance(statement.value, Call):
-            self.parse_call(namespace, statement.value.callee, statement.value.args)
-            self.add_instruction(Instruction.MOV, mov(Register.AX, Register.FX)) # MOV AX <- FX
-            self.add_instruction(Instruction.STA, self.memory.id_on_stack(namespace.get_namespace()[statement.name]), stack_flag=True, mem_flag=True) # STA func_return
+            if isinstance(statement.value.callee, Call):
+                self.parse_call(namespace, statement.value.callee.callee, statement.value.callee.args)
+                self.add_instruction(Instruction.MOV, mov(Register.AX, Register.FX)) # MOV AX <- FX
+                self.memory.temp_extra_stack_vars += 1
+                self.add_instruction(Instruction.PUSH, 1)
+                self.add_instruction(Instruction.STA, 1, stack_flag=True)
+                self.parse_call(namespace, 1, statement.value.args)
+                self.add_instruction(Instruction.FREE, 1)
+                self.memory.temp_extra_stack_vars -= 1
+                self.add_instruction(Instruction.MOV, mov(Register.AX, Register.FX)) # MOV AX <- FX
+                self.add_instruction(Instruction.STA, self.memory.id_on_stack(namespace.get_namespace()[statement.name]), stack_flag=True, mem_flag=True)
+            else:
+                self.parse_call(namespace, statement.value.callee, statement.value.args)
+                self.add_instruction(Instruction.MOV, mov(Register.AX, Register.FX)) # MOV AX <- FX
+                self.add_instruction(Instruction.STA, self.memory.id_on_stack(namespace.get_namespace()[statement.name]), stack_flag=True, mem_flag=True) # STA func_return
         else:
             raise Exception("Unhandled assign statement")
         
@@ -441,11 +461,18 @@ class Assembler:
                         self.add_instruction(Instruction.POP, len(namespace.get_namespace(True)))
                     self.add_instruction(Instruction.RET, statement.value.value) # RET value
                 elif isinstance(statement.value, Variable):
-                    self.add_instruction(Instruction.LDA, self.memory.id_on_stack(namespace.get_namespace()[statement.value.name]), stack_flag=True)
-                    self.add_instruction(Instruction.MOV, mov(Register.FX, Register.AX)) # MOV FX <- AX
-                    if len(namespace.get_namespace(True)) > 0:
-                        self.add_instruction(Instruction.POP, len(namespace.get_namespace(True)))
-                    self.add_instruction(Instruction.RET, 0, stack_flag=True) # RET none
+                    if statement.value.name in self.function_names:
+                        self.add_instruction(Instruction.LDA, FunctionAddress(statement.value))
+                        self.add_instruction(Instruction.MOV, mov(Register.FX, Register.AX)) # MOV FX <- AX
+                        if len(namespace.get_namespace(True)) > 0:
+                            self.add_instruction(Instruction.POP, len(namespace.get_namespace(True)))
+                        self.add_instruction(Instruction.RET, 0, stack_flag=True) # RET none
+                    else:
+                        self.add_instruction(Instruction.LDA, self.memory.id_on_stack(namespace.get_namespace()[statement.value.name]), stack_flag=True)
+                        self.add_instruction(Instruction.MOV, mov(Register.FX, Register.AX)) # MOV FX <- AX
+                        if len(namespace.get_namespace(True)) > 0:
+                            self.add_instruction(Instruction.POP, len(namespace.get_namespace(True)))
+                        self.add_instruction(Instruction.RET, 0, stack_flag=True) # RET none
                 elif isinstance(statement.value, Binary):
                     self.parse_binary(namespace, statement.value)
                     self.add_instruction(Instruction.MOV, mov(Register.FX, Register.AX)) # MOV FX <- AX

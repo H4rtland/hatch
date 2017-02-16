@@ -149,7 +149,10 @@ def NEG(emulator, mem_flag, stack_flag, data):
 @debug_addr
 def CALL(emulator, mem_flag, stack_flag, data):
     emulator.call_stack.append(emulator.instruction_register.value)
-    emulator.instruction_register.load(data)
+    if stack_flag:
+        emulator.instruction_register.load(emulator.memory[emulator.stack[-data]+emulator.reg_offset.value])
+    else:
+        emulator.instruction_register.load(data)
 
 @debug_addr
 def RET(emulator, mem_flag, stack_flag, data):
