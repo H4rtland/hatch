@@ -1,4 +1,5 @@
 import sys
+import time
 from enum import Enum
 
 from compiler.expressions import *
@@ -33,7 +34,7 @@ class Assembler:
                 if branch.name.lexeme == "main":
                     self.main = branch
                 else:
-                    self.globals.globals[branch.name.lexeme] = 0
+                    self.globals.globals[branch.name.lexeme] = FunctionAddress(Variable(branch.name.lexeme))
                     self.non_main_functions.append(branch)
                     self.function_names.append(branch.name.lexeme)
         if self.main is None:
@@ -73,6 +74,8 @@ class Assembler:
             if all(isinstance(inst, int) for inst in self.instructions):
                 # no more functions left to compile
                 break
+            print(self.instructions)
+            time.sleep(0.1)
             names = []
             functions_remaining = []
             for instruction in self.instructions:
@@ -91,9 +94,10 @@ class Assembler:
                             namespace.let(arg[1].lexeme, 1, arg[0].lexeme)
                         self.parse(namespace, function.body, is_function=True)
                         self.function_return_addresses[function.name.lexeme] = len(self.instructions)-1
+                print(self.function_addresses)
                 for i, inst in enumerate(self.instructions):
                     if isinstance(inst, FunctionAddress):
-                        if inst.func_name.name == func_address.func_name.name:
+                        if inst.func_name.name == func_address.func_name.name and inst.func_name.name in self.function_addresses:
                             self.instructions[i] = self.function_addresses[inst.func_name.name]
         
         data_start = len(self.instructions)
@@ -196,8 +200,17 @@ class Assembler:
         if isinstance(func, int):
             stack_value = func + self.memory.temp_extra_stack_vars - 1
             self.add_instruction(Instruction.CALL, stack_value, stack_flag=True)
+        elif isinstance(func, FunctionAddress):
+            print("CALL", func)
+            self.add_instruction(Instruction.CALL, func)
+        elif isinstance(func, Variable):
+            print("CALL2", func)
+            if namespace.exists(func.name) and self.memory.exists(namespace.get_namespace()[func.name]):
+                self.add_instruction(Instruction.CALL, self.memory.id_on_stack(namespace.get_namespace()[func.name]), stack_flag=True) # CALL function_start
+            else:
+                self.add_instruction(Instruction.CALL, FunctionAddress(func)) # CALL function_start
         else:
-            self.add_instruction(Instruction.CALL, FunctionAddress(func)) # CALL function_start
+            raise Exception("Unhandled call")
         
         self.memory.temp_extra_stack_vars -= extra_stack_vars
         
@@ -302,6 +315,17 @@ class Assembler:
             identifier = namespace.let(statement.name.lexeme, 1, statement.vtype.lexeme)
             self.add_instruction(Instruction.PUSH, 1)
             self.add_instruction(Instruction.STA, self.memory.id_on_stack(identifier), stack_flag=True) # STA sum
+        elif isinstance(statement.initial, Variable):
+            if statement.initial.name in self.function_names:
+                self.add_instruction(Instruction.LDA, FunctionAddress(statement.initial))
+                self.add_instruction(Instruction.PUSH, 1)
+                identifier = namespace.let(statement.name.lexeme, 1, statement.vtype.lexeme)
+                self.add_instruction(Instruction.STA, self.memory.id_on_stack(identifier), stack_flag=True)
+            else:
+                self.add_instruction(Instruction.LDA, self.memory.id_on_stack(namespace.get_namespace()[statement.initial.name]), stack_flag=True)
+                self.add_instruction(Instruction.PUSH, 1)
+                identifier = namespace.let(statement.name.lexeme, 1, statement.vtype.lexeme)
+                self.add_instruction(Instruction.STA, self.memory.id_on_stack(identifier), stack_flag=True)
         elif isinstance(statement.initial, Array):
             identifier = namespace.let(statement.name.lexeme, statement.length.value+1, statement.vtype.lexeme)
             self.add_instruction(Instruction.PUSH, statement.length.value+1)
@@ -344,6 +368,10 @@ class Assembler:
         elif isinstance(statement.value, Binary):
             self.parse_binary(namespace, statement.value)
             self.add_instruction(Instruction.STA, self.memory.id_on_stack(namespace.get_namespace()[statement.name]), stack_flag=True, mem_flag=True) # STA [var_name]
+        elif isinstance(statement.value, Variable):
+            self.add_instruction(Instruction.LDA, self.memory.id_on_stack(namespace.get_namespace()[statement.value.name]), stack_flag=True)
+            self.add_instruction(Instruction.PUSH, 1)
+            self.add_instruction(Instruction.STA, 1, stack_flag=True)
         elif isinstance(statement.value, Call):
             if isinstance(statement.value.callee, Call):
                 self.parse_call(namespace, statement.value.callee.callee, statement.value.callee.args)

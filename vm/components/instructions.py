@@ -237,10 +237,11 @@ def PRC(emulator, mem_flag, stack_flag, data):
             print(to_print, end="")
         emulator.output.append(to_print)
         
-    
+@debug
 def DUP(emulator, mem_flag, stack_flag, data):
     emulator.stack.append(emulator.stack[-data])
-    
+
+@debug
 def FREE(emulator, mem_flag, stack_flag, data):
     for i in range(0, data):
         emulator.memory_map[emulator.stack[-(i+1)]] = False

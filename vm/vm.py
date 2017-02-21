@@ -57,12 +57,15 @@ class OctoEngine:
         instructions[instruction](self, mem_flag, stack_flag, data)
         #print(sum([1 if not b == 0 else 0 for b in self.memory.memory[self.program_end:]])/len(self.memory.memory[self.program_end:]), len(self.memory.memory[self.program_end:]), len(self.stack))
         if settings.debug:
-            print(f"Registers: A:{self.reg_a.value}, B:{self.reg_b.value}, F:{self.reg_func.value}, O:{self.reg_offset.value}")
+            print(f"Registers: A:{self.reg_a.value}, B:{self.reg_b.value}, F:{self.reg_func.value}, O:{self.reg_offset.value}, I:{self.instruction_register.value}")
             print(f"Stack: {self.stack}")
             length = 256-16-self.program_end
             length = min(20, length)
             print(f"Mem: {self.memory.memory[self.program_end:self.program_end+length]}")
-            print()
+            if settings.step:
+                input()
+            else:
+                print()
         
     def run(self):
         while not self.halted:

@@ -1,27 +1,21 @@
 import io;
 
-function int increment(int b) {
-    return b + 1;
+function int add_one(int a) {
+    return a + 1;
 }
 
-function int decrement(int b) {
-    return b - 1;
-}
-
-function func<int> inc_or_dec(int inc) {
-    if (inc == 1) {
-        return increment;
-    } else {
-        return decrement;
-    }
+function int operate(int number, func f) {
+    number = f(number);
+    return number;
 }
 
 function void main() {
-    let int x = 5;
-    x = inc_or_dec(1)(x);
-    print(x);
-
-    let int y = 22;
-    y = inc_or_dec(0)(y);
+    let int x = 0;
+    let func increment = add_one;
+    print(increment);
+    x = increment(x);
+    let int y = x;
+    print(y);
+    y = operate(y, increment);
     print(y);
 }

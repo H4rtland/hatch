@@ -31,8 +31,14 @@ class MemoryModel:
         self.temp_extra_stack_vars = 0
         
     def id_on_stack(self, uid):
-        # print(f"Getting ID on stack, uid={uid}, stack={self.stack}, temp_extra={self.temp_extra_stack_vars} -> {len(self.stack)-self.stack.index(uid) + self.temp_extra_stack_vars}")
+        #if isinstance(uid, FunctionAddress):
+        #    print("Getting ID on stack,", uid)
+        #    return uid
+        #print(f"Getting ID on stack, uid={uid}, stack={self.stack}, temp_extra={self.temp_extra_stack_vars} -> {len(self.stack)-self.stack.index(uid) + self.temp_extra_stack_vars}")
         return len(self.stack)-self.stack.index(uid) + self.temp_extra_stack_vars
+    
+    def exists(self, uid):
+        return uid in self.stack
         
     def space_is_free(self, at, length):
         for addr, block in self.memory.items():
@@ -86,6 +92,9 @@ class Namespace:
         namespace = self.parent.get_namespace(no_globals=no_globals)
         namespace.update(self.locals)
         return dict(namespace)
+    
+    def exists(self, name):
+        return name in self.get_namespace()
     
     def get_type(self, variable):
         return self.types[variable]
