@@ -39,6 +39,9 @@ class TypeChecker:
             
     @checker_for(Function)
     def check_function(self, function, namespace):
+        print("args, ", function.args)
+        for arg in function.args:
+            namespace[arg[1].lexeme] = Let(arg[0], arg[1].lexeme, 0, False, 0)
         self.check_branch(function.body, namespace)
         
     @checker_for(Block)

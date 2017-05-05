@@ -128,7 +128,7 @@ class ASTParser:
         while not self.check(TokenType.RIGHT_BRACKET):
             reference = False
             arg_type = self.consume(TokenType.IDENTIFIER, f"Expected type for arg {arg_num}")
-            arg_type = TypeManager.get_type(arg_type.lexeme)
+            #arg_type = TypeManager.get_type(arg_type.lexeme)
             if self.check(TokenType.AMPERSAND):
                 self.consume(TokenType.AMPERSAND)
                 reference = True

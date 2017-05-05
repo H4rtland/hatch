@@ -91,7 +91,7 @@ class Assembler:
                         self.function_addresses[function.name.lexeme] = len(self.instructions)
                         namespace = Namespace(self.globals, self.memory)
                         for arg in function.args:
-                            namespace.let(arg[1].lexeme, 1, arg[0].name)
+                            namespace.let(arg[1].lexeme, 1, arg[0].lexeme)
                         self.parse(namespace, function.body, is_function=True)
                         self.function_return_addresses[function.name.lexeme] = len(self.instructions)-1
                 print(self.function_addresses)
