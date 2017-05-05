@@ -142,7 +142,7 @@ class ASTParser:
         self.consume(TokenType.RIGHT_BRACKET, "Expected ')' after function args")
         
         function_body = self.block()
-        return_type = TypeManager.get_type(rtype.lexeme)
+        return_type = rtype#TypeManager.get_type(rtype.lexeme)
         return Function(name, return_type, args, function_body)
     
     def block(self):
@@ -209,10 +209,6 @@ class ASTParser:
             operator = self.previous()
             right = self.factor()
             expr = Binary(expr, operator, right)
-            try:
-                expr.resolve_type()
-            except Exception:
-                self.print_error(operator, f"Binary type mismatch: {expr.left.resolve_type()} with {expr.right.resolve_type()}")
         return expr
     
     def factor(self):

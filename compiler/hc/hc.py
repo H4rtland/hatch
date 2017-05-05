@@ -6,7 +6,7 @@ from compiler.ast import ASTParser
 from compiler.type_checker import TypeChecker
 from compiler.assembler import Assembler
 
-def compile(source, debug=False, filename="<source>"):
+def compile(source, debug=False, filename="function void main() {}"):
     tokenizer = Tokenizer(source)
     tokens = tokenizer.tokenize()
     

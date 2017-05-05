@@ -17,7 +17,7 @@ function void main() {
 }
 """
 
-def test_recursion():
+def test_string():
     instructions = hc.compile(hatch)
     
     virtual_machine = vm.OctoEngine(True)
