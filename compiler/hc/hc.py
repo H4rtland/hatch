@@ -3,6 +3,7 @@ import os.path
 
 from compiler.tokenizer import Tokenizer
 from compiler.ast import ASTParser
+from compiler.type_checker import TypeChecker
 from compiler.assembler import Assembler
 
 def compile(source, debug=False, filename="<source>"):
@@ -18,6 +19,9 @@ def compile(source, debug=False, filename="<source>"):
     if debug:
         for trunk in tree:
             trunk.print()
+            
+    type_checker = TypeChecker(source, tree)
+    type_checker.check()
         
     assembler = Assembler(tree)
     instructions = assembler.assemble()

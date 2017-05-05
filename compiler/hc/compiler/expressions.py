@@ -1,3 +1,5 @@
+from compiler.types import TypeManager, Types
+
 class Block:
     def __init__(self, statements):
         self.statements = statements
@@ -14,9 +16,12 @@ class Function:
         self.rtype = rtype
         self.args = args
         self.body = body
+        
+    def resolve_type(self, namespace):
+        return self.rtype
     
     def print(self, indent=0):
-        print("    "*indent + f"<Function: {self.rtype.lexeme} {self.name.lexeme} ({self.args})>")
+        print("    "*indent + f"<Function: {self.rtype} {self.name.lexeme} ({self.args})>")
         self.body.print(indent+1)
         #print("    "*indent + "}")
         
@@ -71,6 +76,10 @@ class Variable:
     def __repr__(self):
         return f"<Variable: {self.name}>"
     
+    def resolve_type(self, namespace):
+        return TypeManager.get_type(namespace[self.name].vtype.lexeme)
+        #return TypeManager.get_type("int")
+    
 class Index:
     def __init__(self, variable, index):
         self.variable = variable
@@ -80,14 +89,18 @@ class Index:
         return f"<Index: {self.variable}[{self.index}]>"
         
 class Literal:
-    def __init__(self, value):
+    def __init__(self, value, type_):
         self.value = value
+        self.type = type_
+        
+    def resolve_type(self, namespace):
+        return self.type
     
     def __repr__(self):
-        return f"<Literal: {self.value}>"
+        return f"<Literal: {self.value}, {self.type}>"
     
     def print(self, indent=0):
-        print("    "*indent + f"<Literal {self.value}>")
+        print("    "*indent + f"<Literal {self.value}, {self.type}>")
 
 class If:
     def __init__(self, condition, then, otherwise):
@@ -126,6 +139,9 @@ class Binary:
         self.left = left
         self.operator = operator
         self.right = right
+        
+    def resolve_type(self, namespace):
+        return Types.BOOL
     
     def __repr__(self):
         return f"<Binary: {self.left} {self.operator.lexeme} {self.right}>"

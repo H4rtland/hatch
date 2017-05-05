@@ -4,6 +4,7 @@ import os.path as op
 
 from compiler.tokenizer import TokenType, Tokenizer
 from compiler.expressions import *
+from compiler.types import Types, TypeManager
 
 class ASTParser:
     def __init__(self, tokens, source, filename, compiler):
@@ -127,6 +128,7 @@ class ASTParser:
         while not self.check(TokenType.RIGHT_BRACKET):
             reference = False
             arg_type = self.consume(TokenType.IDENTIFIER, f"Expected type for arg {arg_num}")
+            arg_type = TypeManager.get_type(arg_type.lexeme)
             if self.check(TokenType.AMPERSAND):
                 self.consume(TokenType.AMPERSAND)
                 reference = True
@@ -140,7 +142,8 @@ class ASTParser:
         self.consume(TokenType.RIGHT_BRACKET, "Expected ')' after function args")
         
         function_body = self.block()
-        return Function(name, rtype, args, function_body)
+        return_type = TypeManager.get_type(rtype.lexeme)
+        return Function(name, return_type, args, function_body)
     
     def block(self):
         self.consume(TokenType.LEFT_BRACE, "Expected '{' to open block")
@@ -206,6 +209,10 @@ class ASTParser:
             operator = self.previous()
             right = self.factor()
             expr = Binary(expr, operator, right)
+            try:
+                expr.resolve_type()
+            except Exception:
+                self.print_error(operator, f"Binary type mismatch: {expr.left.resolve_type()} with {expr.right.resolve_type()}")
         return expr
     
     def factor(self):
@@ -264,15 +271,15 @@ class ASTParser:
         
     def primary(self):
         if self.match(TokenType.TRUE):
-            return Literal(True)
+            return Literal(True, Types.BOOL)
         if self.match(TokenType.FALSE):
-            return Literal(False)
+            return Literal(False, Types.BOOL)
         
         if self.match(TokenType.STRING, TokenType.NUMBER):
             if self.previous().token_type == TokenType.NUMBER:
                 if not (0 <= self.previous().literal <= 255):
                     self.print_error(self.previous(), "Integer literal outside range 0-255")
-            return Literal(self.previous().literal)
+            return Literal(self.previous().literal, Types.INT)
         
         if self.match(TokenType.IDENTIFIER):
             if self.check(TokenType.LEFT_SQUARE):
@@ -283,7 +290,7 @@ class ASTParser:
                 return Index(variable, index)
             return Variable(self.previous().lexeme)
         
-        return Literal(1)
+        return Literal(1, Types.INT)
         
     def let(self, no_semicolon=False):
         vtype = self.consume(TokenType.IDENTIFIER, "Expected variable type")
@@ -300,10 +307,11 @@ class ASTParser:
         initial = self.expression()
         if vtype.lexeme == "string":
             is_array = True
-            array_length = Literal(len(initial.value))
-            initial = Array([Literal(byte) for byte in list(bytes(initial.value, "utf8"))])
+            array_length = Literal(len(initial.value), Types.INT)
+            initial = Array([Literal(byte, Types.INT) for byte in list(bytes(initial.value, "utf8"))])
         if not no_semicolon:
             self.consume(TokenType.SEMICOLON, "Expected semicolon following let statement")
+        
         branch = Let(vtype, name, initial, is_array, array_length)
         return branch
     
