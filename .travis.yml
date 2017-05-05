@@ -5,5 +5,7 @@ python:
 # command to run tests
 script: pytest
 before_script:
+  - export PYTHONPATH="${PYTHONPATH}:/home/travis/build/H4rtland/hatch/compiler/hc"
+  - export PYTHONPATH="${PYTHONPATH}:/home/travis/build/H4rtland/hatch/vm"
   - export PYTHONPATH=$PYTHONPATH:$(pwd)
   - cd /home/travis/build/H4rtland/hatch/tests
