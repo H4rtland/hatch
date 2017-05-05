@@ -4,3 +4,5 @@ python:
 
 # command to run tests
 script: pytest
+before_script:
+  cd /home/travis/build/H4rtland/hatch/tests
