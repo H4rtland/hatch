@@ -74,7 +74,7 @@ class Assembler:
             if all(isinstance(inst, int) for inst in self.instructions):
                 # no more functions left to compile
                 break
-            print(self.instructions)
+            #print(self.instructions)
             time.sleep(0.1)
             names = []
             functions_remaining = []
@@ -94,7 +94,7 @@ class Assembler:
                             namespace.let(arg[1].lexeme, 1, arg[0].lexeme)
                         self.parse(namespace, function.body, is_function=True)
                         self.function_return_addresses[function.name.lexeme] = len(self.instructions)-1
-                print(self.function_addresses)
+                #print(self.function_addresses)
                 for i, inst in enumerate(self.instructions):
                     if isinstance(inst, FunctionAddress):
                         if inst.func_name.name == func_address.func_name.name and inst.func_name.name in self.function_addresses:
@@ -201,10 +201,10 @@ class Assembler:
             stack_value = func + self.memory.temp_extra_stack_vars - 1
             self.add_instruction(Instruction.CALL, stack_value, stack_flag=True)
         elif isinstance(func, FunctionAddress):
-            print("CALL", func)
+            #print("CALL", func)
             self.add_instruction(Instruction.CALL, func)
         elif isinstance(func, Variable):
-            print("CALL2", func)
+            #print("CALL2", func)
             if namespace.exists(func.name) and self.memory.exists(namespace.get_namespace()[func.name]):
                 self.add_instruction(Instruction.CALL, self.memory.id_on_stack(namespace.get_namespace()[func.name]), stack_flag=True) # CALL function_start
             else:

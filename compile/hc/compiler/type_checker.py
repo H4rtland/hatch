@@ -26,7 +26,7 @@ class TypeChecker:
         
     def check(self):
         namespace = {f.name.lexeme:f for f in self.ast}
-        print(namespace)
+        #print(namespace)
         for function in self.ast:
             self.check_branch(function, namespace)
             
@@ -39,7 +39,7 @@ class TypeChecker:
             
     @checker_for(Function)
     def check_function(self, function, namespace):
-        print("args, ", function.args)
+        #print("args, ", function.args)
         for arg in function.args:
             namespace[arg[1].lexeme] = Let(arg[0], arg[1].lexeme, 0, False, 0)
         self.check_branch(function.body, namespace)
@@ -53,7 +53,7 @@ class TypeChecker:
             
     @checker_for(If)
     def check_if(self, if_statement: If, namespace):
-        print(if_statement.condition.resolve_type(namespace))
+        #print(if_statement.condition.resolve_type(namespace))
         if not if_statement.condition.resolve_type(namespace) == Types.BOOL:
             self.print_error("If statement did not receive boolean expression")
         if isinstance(if_statement.condition, Binary):

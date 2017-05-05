@@ -1,5 +1,8 @@
-import compile.hc.hc as hc
-import hvm.vm as vm
+import os
+print(os.getcwd())
+
+from compile.hc import hc
+from hvm import vm
 
 hatch = """
 import io;

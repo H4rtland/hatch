@@ -1,5 +1,5 @@
-import compile.hc.hc as hc
-import hvm.vm as vm
+from compile.hc import hc
+from hvm import vm
 
 hatch = """
 import io;
