@@ -1,11 +1,6 @@
-import sys
 
-sys.path.append("../compiler/hc")
-import hc
-from compiler.instructions import Instruction
-
-sys.path.append("../vm")
-import vm
+import compile.hc.hc as hc
+import hvm.vm as vm
 
 hatch = """
 import io;

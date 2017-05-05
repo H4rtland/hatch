@@ -1,7 +1,7 @@
 # hatch
 
 [![](https://tokei.rs/b1/github/H4rtland/hatch?category=code)](https://github.com/H4rtland/hatch)
-
+[![Build Status](https://travis-ci.org/H4rtland/hatch.svg?branch=master)](https://travis-ci.org/H4rtland/hatch)
 ## Instruction set
 
 The instruction set can address 256 bytes of memory, as each "single" instruction is stored in a pair of memory bytes, the first being the instruction and the second the data.

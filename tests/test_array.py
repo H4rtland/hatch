@@ -1,10 +1,5 @@
-import sys
-
-sys.path.append("../compiler/hc")
-import hc
-
-sys.path.append("../vm")
-import vm
+import compile.hc.hc as hc
+import hvm.vm as vm
 
 hatch = """
 import io;
@@ -21,7 +16,7 @@ function void main() {
 }
 """
 
-def test_for():
+def test_array():
     instructions = hc.compile(hatch)
     
     virtual_machine = vm.OctoEngine(True)
