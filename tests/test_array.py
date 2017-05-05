@@ -1,6 +1,3 @@
-import os
-print(os.getcwd())
-
 from compile.hc import hc
 from hvm import vm
 
