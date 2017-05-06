@@ -1,3 +1,4 @@
+from compiler.tokenizer import TokenType
 from compiler.types import TypeManager, Types
 
 class Block:
@@ -18,12 +19,14 @@ class Function:
         self.body = body
         
     def resolve_type(self, namespace):
-        return self.rtype
+        return TypeManager.get_type(self.rtype.lexeme)
     
     def print(self, indent=0):
         print("    "*indent + f"<Function: {self.rtype} {self.name.lexeme} ({self.args})>")
         self.body.print(indent+1)
-        #print("    "*indent + "}")
+        
+    def __repr__(self):
+        return f"<Function: {self.rtype} {self.name.lexeme} ({self.args})>"
         
 class Expression:
     def __init__(self, expression):
@@ -130,6 +133,9 @@ class Call:
 class Return:
     def __init__(self, value):
         self.value = value
+        
+    def resolve_type(self, namespace):
+        return self.value.resolve_type(namespace)
 
     def print(self, indent=0):
         print("    "*indent + f"<Return: {self.value}>")
@@ -141,7 +147,12 @@ class Binary:
         self.right = right
         
     def resolve_type(self, namespace):
-        return Types.BOOL
+        if not self.left.resolve_type(namespace) == self.right.resolve_type(namespace):
+            raise Exception(f"Binary type mismatch {self.left.resolve_type(namespace)} != {self.right.resolve_type(namespace)}")
+        if self.operator.token_type in [TokenType.EQUAL_EQUAL, TokenType.NOT_EQUAL, TokenType.GREATER_EQUAL, TokenType.LESS_EQUAL]:
+            return Types.BOOL
+        else:
+            return self.left.resolve_type(namespace)
     
     def __repr__(self):
         return f"<Binary: {self.left} {self.operator.lexeme} {self.right}>"
