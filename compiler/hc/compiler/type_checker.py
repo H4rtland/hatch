@@ -70,3 +70,9 @@ class TypeChecker:
         print(type(return_statement.resolve_type(namespace)), type(current_function.resolve_type(namespace)))
         if not return_statement.resolve_type(namespace) == current_function.resolve_type(namespace):
             self.print_error(f"Return type mismatch: {return_statement.resolve_type(namespace)} != {current_function.resolve_type(namespace)}")
+            
+    @checker_for(Let)
+    def check_let(self, let_statement: Let, namespace):
+        if not TypeManager.get_type(let_statement.vtype.lexeme) == let_statement.initial.resolve_type(namespace):
+            self.print_error(f"Let statement type mismatch: "
+                             f"{TypeManager.get_type(let_statement.vtype.lexeme)} != {let_statement.initial.resolve_type(namespace)}")

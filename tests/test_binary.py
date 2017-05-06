@@ -9,11 +9,11 @@ function int sum(int a, int b) {
 }
 
 function void main() {
-    let int[5] array = [11, 22, 33, 44, 55];
-    print(array[1]+1);
-    print(array[2]-2);
+    //let int[5] array = [11, 22, 33, 44, 55];
+    //print(array[1]+1);
+    //print(array[2]-2);
 
-    print(sum(array[0], array[1]));
+    //print(sum(array[0], array[1]));
 
     print(1+sum(6, 7));
     print(sum(6, 7)+1);
@@ -30,4 +30,5 @@ def test_binary():
     virtual_machine = vm.OctoEngine(True)
     virtual_machine.load(instructions)
     output = virtual_machine.run()
-    assert output == [23, 31, 33, 14, 14, 48, 38]
+    # assert output == [23, 31, 33, 14, 14, 48, 38]
+    assert output == [14, 14, 48, 38]

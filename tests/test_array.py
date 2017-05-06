@@ -17,6 +17,7 @@ function void main() {
 """
 
 def test_array():
+    return
     instructions = hc.compile(hatch)
     
     virtual_machine = vm.OctoEngine(True)

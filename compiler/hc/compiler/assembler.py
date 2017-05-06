@@ -115,7 +115,7 @@ class Assembler:
             raise Exception(f"Instructions exceeded max memory size: {len(self.instructions)}")
         if not all([(0 <= x <= 255) for x in self.instructions]):
             raise Exception("Overflowed value in output instructions")
-        return self.instructions
+        return self.instructions, self.function_addresses
     
     
     def parse_binary(self, namespace, binary):
@@ -319,7 +319,7 @@ class Assembler:
             identifier = namespace.let(statement.name.lexeme, 1, statement.vtype.lexeme)
             value = statement.initial.value
             self.add_instruction(Instruction.PUSH, 1)
-            self.add_instruction(Instruction.LDA, value) # LDA value
+            self.add_instruction(Instruction.LDA, int(value)) # LDA value
             self.add_instruction(Instruction.STA, self.memory.id_on_stack(identifier), stack_flag=True) # STA var_name
         elif isinstance(statement.initial, Call):
             self.parse_call(namespace, statement.initial.callee, statement.initial.args)
