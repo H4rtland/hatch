@@ -73,13 +73,12 @@ class TypeChecker:
             
     @checker_for(If)
     def check_if(self, if_statement: If, namespace):
-        #print(if_statement.condition.resolve_type(namespace))
         if not if_statement.condition.resolve_type(namespace) == Types.BOOL:
             self.print_error("If statement did not receive boolean expression")
-        #if isinstance(if_statement.condition, Binary):
-        #    if not (if_statement.condition.left.resolve_type(namespace) == if_statement.condition.right.resolve_type(namespace)):
-        #        self.print_error(f"Comparison type mismatch: {if_statement.condition.left.resolve_type(namespace)} != {if_statement.condition.right.resolve_type(namespace)}")
-    
+        self.check_branch(if_statement.then, namespace)
+        self.check_branch(if_statement.otherwise, namespace)
+
+
     @checker_for(Return)
     def check_return(self, return_statement: Return, namespace):
         current_function = namespace[self.current_function_identifier]
@@ -95,3 +94,11 @@ class TypeChecker:
     @checker_for(Call)
     def check_call(self, call_statement: Call, namespace):
         call_statement.resolve_type(namespace)
+        
+    @checker_for(Assign)
+    def check_assign(self, assign_statement: Assign, namespace):
+        assigning_to_type = namespace[assign_statement.name].type
+        assigned_type = assign_statement.value.resolve_type(namespace)
+        print(assigning_to_type, assigned_type)
+        if not assigning_to_type == assigned_type:
+            self.print_error(f"Assignment type mismatch: {assigning_to_type} != {assigned_type}")
