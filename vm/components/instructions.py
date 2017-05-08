@@ -157,8 +157,8 @@ def CALL(emulator, mem_flag, stack_flag, data):
 @debug_addr
 def RET(emulator, mem_flag, stack_flag, data):
     emulator.instruction_register.load(emulator.call_stack.pop())
-    #if not stack_flag:
-    #    emulator.reg_func.load(data)
+    if not stack_flag:
+        emulator.reg_func.load(data)
     emulator.reg_b.load(emulator.stack[-1])
     emulator.reg_a.load(emulator.stack[-2])
     emulator.stack = emulator.stack[:-2]

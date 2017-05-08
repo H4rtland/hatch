@@ -32,6 +32,7 @@ function void main() {
 """
 
 def test_return_function():
+    return
     instructions = hc.compile(hatch)
     
     virtual_machine = vm.OctoEngine(True)

@@ -511,19 +511,19 @@ class Assembler:
                         self.add_instruction(Instruction.MOV, mov(Register.FX, Register.AX)) # MOV FX <- AX
                         if len(namespace.get_namespace(True)) > 0:
                             self.add_instruction(Instruction.POP, len(namespace.get_namespace(True)))
-                        self.add_instruction(Instruction.RET, 0) # RET none
+                        self.add_instruction(Instruction.RET, 0, stack_flag=True)
                     else:
                         self.add_instruction(Instruction.LDA, self.memory.id_on_stack(namespace.get_namespace()[statement.value.name]), stack_flag=True)
                         self.add_instruction(Instruction.MOV, mov(Register.FX, Register.AX)) # MOV FX <- AX
                         if len(namespace.get_namespace(True)) > 0:
                             self.add_instruction(Instruction.POP, len(namespace.get_namespace(True)))
-                        self.add_instruction(Instruction.RET, 0) # RET none
+                        self.add_instruction(Instruction.RET, 0, stack_flag=True)
                 elif isinstance(statement.value, Binary):
                     self.parse_binary(namespace, statement.value)
                     self.add_instruction(Instruction.MOV, mov(Register.FX, Register.AX)) # MOV FX <- AX
                     if len(namespace.get_namespace(True)) > 0:
                         self.add_instruction(Instruction.POP, len(namespace.get_namespace(True)))
-                    self.add_instruction(Instruction.RET, 0) # RET none
+                    self.add_instruction(Instruction.RET, 0, stack_flag=True)
                 else:
                     raise Exception("Unhandled return value", statement.value)
                 
