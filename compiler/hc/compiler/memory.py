@@ -93,8 +93,13 @@ class Namespace:
         namespace.update(self.locals)
         return dict(namespace)
     
+    def get_types(self):
+        if self.parent is None:
+            return self.types
+        return {**self.parent.get_types(), **self.types}
+    
     def exists(self, name):
         return name in self.get_namespace()
     
     def get_type(self, variable):
-        return self.types[variable]
+        return self.get_types()[variable]
