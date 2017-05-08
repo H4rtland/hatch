@@ -2,13 +2,14 @@ import io;
 
 function void main() {
     let int x = 0;
-    let bool change_to_2 = true;
+    let bool change_to_2 = false;
     if (change_to_2) {
         x = 2;
     } else {
         x = get_4();
     }
     print(x);
+    let int yon = get_4();
 }
 
 function int get_4() {

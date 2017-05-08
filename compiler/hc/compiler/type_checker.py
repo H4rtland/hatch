@@ -1,9 +1,9 @@
 import uuid
+from collections import namedtuple
 
 from compiler.expressions import *
 
 expression_checkers = {}
-
 
 class checker_for:
     def __init__(self, expression):
@@ -12,6 +12,14 @@ class checker_for:
     def __call__(self, f):
         expression_checkers[self.expression] = f
         return f
+    
+NamespaceFunction = namedtuple("NamespaceFunction", ["return_type", "args"])
+NamespaceVariable = namedtuple("NamespaceVariable", ["type", "is_array"])
+
+internal_functions = {
+    "__internal_print":NamespaceFunction(TypeManager.get_type("void"), [NamespaceVariable(TypeManager.get_type("int"), False)]),
+    "__internal_print_char":NamespaceFunction(TypeManager.get_type("void"), [NamespaceVariable(TypeManager.get_type("int"), False)]),
+}
     
 
 class TypeChecker:
@@ -29,10 +37,16 @@ class TypeChecker:
         raise Exception(error)
         
     def check(self):
-        namespace = {f.name.lexeme:f for f in self.ast}
-        #print(namespace)
+        namespace = dict(internal_functions)
         for function in self.ast:
-            self.check_branch(function, namespace)
+            args = [NamespaceVariable(TypeManager.get_type(arg[0].lexeme), False) for arg in function.args]
+            namespace[function.name.lexeme] = NamespaceFunction(TypeManager.get_type(function.rtype.lexeme), args)
+        print(namespace)
+        try:
+            for function in self.ast:
+                self.check_branch(function, namespace)
+        except ExpressionValidationException as e:
+            self.print_error(str(e))
             
     def check_branch(self, branch, namespace):
         if branch.__class__ in expression_checkers:
@@ -43,9 +57,10 @@ class TypeChecker:
             
     @checker_for(Function)
     def check_function(self, function, namespace):
-        namespace[self.current_function_identifier] = function
+        namespace[self.current_function_identifier] = namespace[function.name.lexeme]
         for arg in function.args:
-            namespace[arg[1].lexeme] = Let(arg[0], arg[1].lexeme, 0, False, 0)
+            # namespace[arg[1].lexeme] = Let(arg[0], arg[1].lexeme, 0, False, 0)
+            namespace[arg[1].lexeme] = NamespaceVariable(TypeManager.get_type(arg[0].lexeme), False)
         self.check_branch(function.body, namespace)
         
     @checker_for(Block)
@@ -53,7 +68,8 @@ class TypeChecker:
         for statement in block.statements:
             self.check_branch(statement, namespace)
             if isinstance(statement, Let):
-                namespace[statement.name.lexeme] = statement
+                # namespace[statement.name.lexeme] = statement
+                namespace[statement.name.lexeme] = NamespaceVariable(TypeManager.get_type(statement.vtype.lexeme), False)
             
     @checker_for(If)
     def check_if(self, if_statement: If, namespace):
@@ -67,12 +83,15 @@ class TypeChecker:
     @checker_for(Return)
     def check_return(self, return_statement: Return, namespace):
         current_function = namespace[self.current_function_identifier]
-        print(type(return_statement.resolve_type(namespace)), type(current_function.resolve_type(namespace)))
-        if not return_statement.resolve_type(namespace) == current_function.resolve_type(namespace):
-            self.print_error(f"Return type mismatch: {return_statement.resolve_type(namespace)} != {current_function.resolve_type(namespace)}")
+        if not return_statement.resolve_type(namespace) == current_function.return_type:
+            self.print_error(f"Return type mismatch: {return_statement.resolve_type(namespace)} != {current_function.return_type}")
             
     @checker_for(Let)
     def check_let(self, let_statement: Let, namespace):
         if not TypeManager.get_type(let_statement.vtype.lexeme) == let_statement.initial.resolve_type(namespace):
             self.print_error(f"Let statement type mismatch: "
                              f"{TypeManager.get_type(let_statement.vtype.lexeme)} != {let_statement.initial.resolve_type(namespace)}")
+            
+    @checker_for(Call)
+    def check_call(self, call_statement: Call, namespace):
+        call_statement.resolve_type(namespace)

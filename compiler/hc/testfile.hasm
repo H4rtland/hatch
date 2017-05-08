@@ -4,7 +4,7 @@ main:
 2: LDA 0
 4: STA [$1]
 6: PUSH 1
-8: LDA 1
+8: LDA 0
 10: STA [$1]
 12: LDA [$1]
 14: LDB 1
@@ -15,25 +15,30 @@ main:
 24: STA [$2]
 26: JMP 36
 28: SAVE 0
-30: CALL 50
+30: CALL 60
 32: MOV 4
 34: STA [$2]
 36: SAVE 0
 38: LDA [$4]
 40: PUSH 1
 42: STA [$1]
-44: CALL 64
-46: FREE 2
-48: HLT 0
-get_4:
-50: PUSH 1
-52: LDA 4
+44: CALL 74
+46: SAVE 0
+48: CALL 60
+50: MOV 4
+52: PUSH 1
 54: STA [$1]
-56: LDA [$1]
-58: MOV 64
-60: POP 1
-62: RET [$0]
+56: FREE 3
+58: HLT 0
+get_4:
+60: PUSH 1
+62: LDA 4
+64: STA [$1]
+66: LDA [$1]
+68: MOV 64
+70: POP 1
+72: RET 0
 print:
-64: PRX [$1]
-66: FREE 1
-68: RET 0
+74: PRX [$1]
+76: FREE 1
+78: RET 0

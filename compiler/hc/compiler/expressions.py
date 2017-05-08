@@ -1,6 +1,9 @@
 from compiler.tokenizer import TokenType
 from compiler.types import TypeManager, Types
 
+class ExpressionValidationException(Exception):
+    pass
+
 class Block:
     def __init__(self, statements):
         self.statements = statements
@@ -80,7 +83,7 @@ class Variable:
         return f"<Variable: {self.name}>"
     
     def resolve_type(self, namespace):
-        return TypeManager.get_type(namespace[self.name].vtype.lexeme)
+        return namespace[self.name].type
         #return TypeManager.get_type("int")
     
 class Index:
@@ -130,6 +133,17 @@ class Call:
     def __repr__(self):
         return f"<Call: func {self.callee}, args {self.args}>"
     
+    def resolve_type(self, namespace):
+        function = namespace[self.callee.name]
+        if len(function.args) != len(self.args):
+            raise ExpressionValidationException(f"Wrong number of args: expected {len(function.args)}, got {len(self.args)}")
+        arg_pairs = zip(function.args, self.args)
+        for i, (f, c) in enumerate(arg_pairs):
+            if not (f.type == c.resolve_type(namespace)):
+                raise ExpressionValidationException(f"Argument mismatch: arg ({i}) {f.type} != {c.resolve_type(namespace)}")
+        
+        return function.return_type
+    
 class Return:
     def __init__(self, value):
         self.value = value
@@ -148,7 +162,7 @@ class Binary:
         
     def resolve_type(self, namespace):
         if not self.left.resolve_type(namespace) == self.right.resolve_type(namespace):
-            raise Exception(f"Binary type mismatch {self.left.resolve_type(namespace)} != {self.right.resolve_type(namespace)}")
+            raise ExpressionValidationException(f"Binary type mismatch {self.left.resolve_type(namespace)} != {self.right.resolve_type(namespace)}")
         if self.operator.token_type in [TokenType.EQUAL_EQUAL, TokenType.NOT_EQUAL, TokenType.GREATER_EQUAL, TokenType.LESS_EQUAL]:
             return Types.BOOL
         else:
