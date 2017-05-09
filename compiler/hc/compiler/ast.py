@@ -54,6 +54,9 @@ class ASTParser:
     def previous(self):
         return self.tokens[self.position-1]
     
+    def next(self):
+        return self.tokens[self.position]
+    
     def insert(self, tokens):
         self.tokens[self.position:self.position] = tokens
         
@@ -282,7 +285,10 @@ class ASTParser:
             if self.previous().token_type == TokenType.NUMBER:
                 if not (0 <= self.previous().literal <= 255):
                     self.print_error(self.previous(), "Integer literal outside range 0-255")
-            return Literal(self.previous().literal, Types.INT)
+                return Literal(self.previous().literal, Types.INT)
+            elif self.previous().token_type == TokenType.STRING:
+                string_array = Array([Literal(byte, Types.INT) for byte in list(bytes(self.previous().literal, "utf8"))], is_string=True)
+                return string_array
         
         if self.match(TokenType.IDENTIFIER):
             if self.check(TokenType.LEFT_SQUARE):
@@ -303,6 +309,8 @@ class ASTParser:
             is_array = True
             self.consume(TokenType.LEFT_SQUARE)
             #array_length = self.consume(TokenType.NUMBER, "Expected array length")
+            if self.check(TokenType.RIGHT_SQUARE):
+                self.print_error(self.next(), "No array length specified")
             array_length = self.primary()
             self.consume(TokenType.RIGHT_SQUARE, "Expected closing square bracket")
         name = self.consume(TokenType.IDENTIFIER, "Expected variable name")
@@ -310,8 +318,8 @@ class ASTParser:
         initial = self.expression()
         if vtype.lexeme == "string":
             is_array = True
-            array_length = Literal(len(initial.value), Types.INT)
-            initial = Array([Literal(byte, Types.INT) for byte in list(bytes(initial.value, "utf8"))], is_string=True)
+            print(initial)
+            array_length = Literal(len(initial.elements), Types.INT)
             
         if not no_semicolon:
             self.consume(TokenType.SEMICOLON, "Expected semicolon following let statement")
@@ -323,7 +331,7 @@ class ASTParser:
         value = None
         if not self.check(TokenType.SEMICOLON):
             value = self.expression()
-        self.consume(TokenType.SEMICOLON, "Expected semicolon after return statement")
+        self.consume(TokenType.SEMICOLON, "Expected semicolon after return statement", previous_line=True)
         return Return(value)
     
     def for_(self):

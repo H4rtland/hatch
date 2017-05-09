@@ -4,9 +4,10 @@ import vm
 hatch = """import io;
 
 function void main() {
-    let int[3] numbers = [1, 2, 3];
+    let int[3] numbers = [5, 6];
     print(sum2(numbers));
     print(sum(numbers));
+    print(sum2([25, 8]));
 }
 
 
@@ -32,4 +33,4 @@ def test_pass_array():
     virtual_machine = vm.OctoEngine(True)
     virtual_machine.load(instructions)
     output = virtual_machine.run()
-    assert output == [6, 12]
+    assert output == [11, 22, 33]

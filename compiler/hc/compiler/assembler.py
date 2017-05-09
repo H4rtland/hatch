@@ -90,9 +90,10 @@ class Assembler:
                     if func_address.func_name.name == function.name.lexeme:
                         self.function_addresses[function.name.lexeme] = len(self.instructions)
                         namespace = Namespace(self.globals, self.memory)
+                        parameter_identifiers = []
                         for arg in function.args:
-                            namespace.let(arg[1].lexeme, 1, arg[0].lexeme, arg[3])
-                        self.parse(namespace, function.body, is_function=True)
+                            parameter_identifiers.append(namespace.let(arg[1].lexeme, 1, arg[0].lexeme, arg[3]))
+                        self.parse(namespace, function.body, is_function=True, parameter_identifiers=parameter_identifiers)
                         self.function_return_addresses[function.name.lexeme] = len(self.instructions)-1
                 #print(self.function_addresses)
                 for i, inst in enumerate(self.instructions):
@@ -192,6 +193,9 @@ class Assembler:
                 self.parse_index(namespace, arg.variable, arg.index)
                 self.add_instruction(Instruction.PUSH, 1)
                 self.add_instruction(Instruction.STA, 1, stack_flag=True)
+            elif isinstance(arg, Array):
+                self.load_array(namespace, arg)
+                
             else:
                 raise Exception("Unhandled function argument")
             extra_stack_vars += 1
@@ -213,6 +217,27 @@ class Assembler:
             raise Exception("Unhandled call")
         
         self.memory.temp_extra_stack_vars -= extra_stack_vars
+        
+    def load_array(self, namespace, array, force_length=None):
+        length = force_length or len(array.elements)
+        self.add_instruction(Instruction.PUSH, length+1)
+        self.add_instruction(Instruction.LDA, length)
+        self.add_instruction(Instruction.STA, 1, stack_flag=True)
+        
+        for i, element in enumerate(array.elements):
+            if isinstance(element, Literal):
+                self.add_instruction(Instruction.OFF, i+1)
+                self.add_instruction(Instruction.LDA, element.value)
+                self.add_instruction(Instruction.STA, 1, stack_flag=True)
+            elif isinstance(element, Variable):
+                self.add_instruction(Instruction.OFF, 0)
+                self.add_instruction(Instruction.LDA, self.memory.id_on_stack(namespace.get_namespace()[element.name]), stack_flag=True)
+                self.add_instruction(Instruction.OFF, i+1)
+                self.add_instruction(Instruction.STA, 1, stack_flag=True)
+            else:
+                raise Exception("Unhandled array element")
+        
+        self.add_instruction(Instruction.OFF, 0)
         
     def parse_index(self, namespace, variable, index, register=Register.AX):
         if isinstance(index, Literal):
@@ -345,31 +370,8 @@ class Assembler:
                 self.add_instruction(Instruction.STA, self.memory.id_on_stack(identifier), stack_flag=True)
         elif isinstance(statement.initial, Array):
             identifier = namespace.let(statement.name.lexeme, statement.length.value+1, statement.vtype.lexeme, True)
-            self.add_instruction(Instruction.PUSH, statement.length.value+1)
-            self.add_instruction(Instruction.LDA, statement.length.value)
-            self.add_instruction(Instruction.STA, self.memory.id_on_stack(identifier), stack_flag=True)
+            self.load_array(namespace, statement.initial, force_length=statement.length.value)
             
-            for i, element in enumerate(statement.initial.elements):
-                if isinstance(element, Literal):
-                    #self.add_instruction(Instruction.LDB, i+1)
-                    #self.add_instruction(Instruction.MOV, mov(Register.OX, Register.BX))
-                    self.add_instruction(Instruction.OFF, i+1)
-                    self.add_instruction(Instruction.LDA, element.value)
-                    self.add_instruction(Instruction.STA, 1, stack_flag=True)
-                elif isinstance(element, Variable):
-                    self.add_instruction(Instruction.OFF, 0)
-                    self.add_instruction(Instruction.LDA, self.memory.id_on_stack(namespace.get_namespace()[element.name]), stack_flag=True)
-                    #self.add_instruction(Instruction.LDB, i+1)
-                    #self.add_instruction(Instruction.MOV, mov(Register.OX, Register.BX))
-                    self.add_instruction(Instruction.OFF, i+1)
-                    self.add_instruction(Instruction.STA, 1, stack_flag=True)
-                else:
-                    raise Exception("Unhandled array element")
-                
-                #self.add_instruction(Instruction.LDB, 0)
-                #self.add_instruction(Instruction.MOV, mov(Register.OX, Register.BX))
-            
-            self.add_instruction(Instruction.OFF, 0)
         elif isinstance(statement.initial, Index):
             self.parse_index(namespace, statement.initial.variable, statement.initial.index, register=Register.AX)
             self.add_instruction(Instruction.PUSH, 1)
@@ -464,8 +466,10 @@ class Assembler:
         
                 
         
-    def parse(self, namespace, block, is_function=False, dont_free=False):
-
+    def parse(self, namespace, block, is_function=False, dont_free=False, parameter_identifiers=None):
+        print("Parsing a block with namespace", namespace.locals, namespace.get_namespace())
+        if parameter_identifiers is None:
+            parameter_identifiers = []
         already_popped = dont_free
         
         for statement in block.statements:
@@ -509,30 +513,32 @@ class Assembler:
             elif isinstance(statement, Return):
                 already_popped = True
                 if isinstance(statement.value, Literal):
-                    if len(namespace.get_namespace(True)) > 0:
-                        self.add_instruction(Instruction.POP, len(namespace.get_namespace(True)))
+                    if len(namespace.get_namespace(no_globals=True)) > 0:
+                        self.free_local_stack(namespace, parameter_identifiers=parameter_identifiers, is_return=True)
                     self.add_instruction(Instruction.RET, statement.value.value) # RET value
                 elif isinstance(statement.value, Variable):
                     if statement.value.name in self.function_names:
                         self.add_instruction(Instruction.LDA, FunctionAddress(statement.value))
                         self.add_instruction(Instruction.MOV, mov(Register.FX, Register.AX)) # MOV FX <- AX
-                        if len(namespace.get_namespace(True)) > 0:
-                            self.add_instruction(Instruction.POP, len(namespace.get_namespace(True)))
+                        if len(namespace.get_namespace(no_globals=True)) > 0:
+                            self.free_local_stack(namespace, parameter_identifiers=parameter_identifiers, is_return=True)
                         self.add_instruction(Instruction.RET, 0, stack_flag=True)
                     else:
                         self.add_instruction(Instruction.LDA, self.memory.id_on_stack(namespace.get_namespace()[statement.value.name]), stack_flag=True)
                         self.add_instruction(Instruction.MOV, mov(Register.FX, Register.AX)) # MOV FX <- AX
-                        if len(namespace.get_namespace(True)) > 0:
-                            self.add_instruction(Instruction.POP, len(namespace.get_namespace(True)))
+                        if len(namespace.get_namespace(no_globals=True)) > 0:
+                            self.free_local_stack(namespace, parameter_identifiers=parameter_identifiers, is_return=True)
                         self.add_instruction(Instruction.RET, 0, stack_flag=True)
                 elif isinstance(statement.value, Binary):
                     self.parse_binary(namespace, statement.value)
                     self.add_instruction(Instruction.MOV, mov(Register.FX, Register.AX)) # MOV FX <- AX
-                    if len(namespace.get_namespace(True)) > 0:
-                        self.add_instruction(Instruction.POP, len(namespace.get_namespace(True)))
+                    print("Returning binary", namespace.locals, namespace.get_namespace())
+                    if len(namespace.get_namespace(no_globals=True)) > 0:
+                        self.free_local_stack(namespace, parameter_identifiers=parameter_identifiers, is_return=True)
                     self.add_instruction(Instruction.RET, 0, stack_flag=True)
                 else:
                     raise Exception("Unhandled return value", statement.value)
+                break # don't compile anything after a return
                 
             elif isinstance(statement, For):
                 self.parse_for(Namespace(namespace, self.memory), statement)
@@ -544,13 +550,40 @@ class Assembler:
         # local variables are freed at the end of a block
         if not already_popped:
             if is_function:
-                if len(namespace.get_namespace(no_globals=True)) > 0:
-                    self.add_instruction(Instruction.FREE, len(namespace.get_namespace(True)))
+                #if len(namespace.get_namespace(no_globals=True)) > 0:
+                #    self.add_instruction(Instruction.FREE, len(namespace.get_namespace(True)))
+                self.free_local_stack(namespace, parameter_identifiers=parameter_identifiers, is_return=True)
                 self.add_instruction(Instruction.RET, 0)
             else:
-                if len(namespace.locals) > 0:
-                    self.memory.unstack(len(namespace.locals))
-                    self.add_instruction(Instruction.FREE, len(namespace.locals))
+                self.free_local_stack(namespace, parameter_identifiers=parameter_identifiers)
                 
         #for name in namespace.locals:
         #    self.memory.free(namespace.locals[name])
+    
+    def free_local_stack(self, namespace, parameter_identifiers=None, is_return=False):
+        if parameter_identifiers is None:
+            parameter_identifiers = []
+        # nuke everything in the function if returning, otherwise just the local block
+        local = namespace.get_namespace(no_globals=True) if is_return else namespace.locals
+        if len(local) > 0:
+            reverse_locals = dict(zip(local.values(), local.keys()))
+            streak = 0
+            for identifier in self.memory.stack[::-1]:
+                if not identifier in reverse_locals:
+                    break
+                if not namespace.is_array(reverse_locals[identifier]):
+                    streak += 1
+                else:
+                    # free single byte variables from memory
+                    if streak > 0:
+                        self.add_instruction(Instruction.FREE, streak)
+                    streak = 0
+                    # free the multi byte variable from memory
+                    if identifier in parameter_identifiers:
+                        self.add_instruction(Instruction.POP, 1)
+                    else:
+                        self.add_instruction(Instruction.FREE, 0, mem_flag=True)
+            if streak > 0:
+                self.add_instruction(Instruction.FREE, streak)
+            if not is_return:
+                self.memory.unstack(len(local))

@@ -46,6 +46,7 @@ class OctoEngine:
         
         
     def instruction_cycle(self):
+        start_instruction_register_value = self.instruction_register.value
         instruction = self.memory[self.instruction_register.value] & 0b0001_1111
         if not instruction in instructions:
             raise InstructionException(f"Undefined instruction: {instruction} at memory address {self.instruction_register.value}")
@@ -57,7 +58,7 @@ class OctoEngine:
         instructions[instruction](self, mem_flag, stack_flag, data)
         #print(sum([1 if not b == 0 else 0 for b in self.memory.memory[self.program_end:]])/len(self.memory.memory[self.program_end:]), len(self.memory.memory[self.program_end:]), len(self.stack))
         if settings.debug:
-            print(f"Registers: A:{self.reg_a.value}, B:{self.reg_b.value}, F:{self.reg_func.value}, O:{self.reg_offset.value}, I:{self.instruction_register.value}")
+            print(f"Registers: A:{self.reg_a.value}, B:{self.reg_b.value}, F:{self.reg_func.value}, O:{self.reg_offset.value}, I:{start_instruction_register_value}")
             print(f"Stack: {self.stack}")
             length = 256-16-self.program_end
             length = min(20, length)

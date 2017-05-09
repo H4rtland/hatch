@@ -246,11 +246,23 @@ def PRC(emulator, mem_flag, stack_flag, data):
 def DUP(emulator, mem_flag, stack_flag, data):
     emulator.stack.append(emulator.stack[-data])
 
-@debug
+@debug_addr_data
 def FREE(emulator, mem_flag, stack_flag, data):
-    for i in range(0, data):
-        emulator.memory_map[emulator.stack[-(i+1)]] = False
-    emulator.stack = emulator.stack[:-data]
+    if not mem_flag:
+        for i in range(0, data):
+            emulator.memory_map[emulator.stack[-(i+1)]] = False
+            emulator.memory[emulator.stack[-(i+1)]] = 255
+        emulator.stack = emulator.stack[:-data]
+    else:
+        # clear one value that is as long as the data stored in memory at [top stack]
+        memory_start = emulator.stack[-1]
+        length = emulator.memory[emulator.stack[-1]]
+        memory_end = memory_start + length + 1
+        for i in range(memory_start, memory_end):
+            emulator.memory_map[i] = False
+            emulator.memory[i] = 255
+        emulator.stack = emulator.stack[:-1]
+    
         
 instructions = {
     0b00000: NOP,

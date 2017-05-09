@@ -1,6 +1,17 @@
 import io;
 
-function void main() {
-    let string name = "Hello.";
-    print_string(name);
+function int triangle_number(int n) {
+    if (n == 1) {
+        return 1;
+    } else {
+        return n + triangle_number(n-1);
+    }
+}
+
+function int main() {
+    print(triangle_number(1));
+    print(triangle_number(2));
+    print(triangle_number(3));
+    print(triangle_number(4));
+    print(triangle_number(5));
 }

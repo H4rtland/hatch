@@ -8,6 +8,7 @@ function void main() {
     let string hello = "Hello, world!";
     print_string(hello);
     print_char(hello[1]);
+    print_string("\nEnd");
 }
 """
 
@@ -17,4 +18,4 @@ def test_string():
     virtual_machine = vm.OctoEngine(True)
     virtual_machine.load(instructions)
     output = virtual_machine.run()
-    assert output == list("Hello, world!\ne")
+    assert output == list("Hello, world!\ne\nEnd\n")
