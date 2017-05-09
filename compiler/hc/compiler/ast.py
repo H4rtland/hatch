@@ -133,7 +133,9 @@ class ASTParser:
                 self.consume(TokenType.LEFT_SQUARE)
                 self.consume(TokenType.RIGHT_SQUARE, "Expected closing square bracket for array argument")
                 array = True
-            #arg_type = TypeManager.get_type(arg_type.lexeme)
+            if arg_type.lexeme == "string":
+                array = True
+            
             if self.check(TokenType.AMPERSAND):
                 self.consume(TokenType.AMPERSAND)
                 reference = True
@@ -309,7 +311,8 @@ class ASTParser:
         if vtype.lexeme == "string":
             is_array = True
             array_length = Literal(len(initial.value), Types.INT)
-            initial = Array([Literal(byte, Types.INT) for byte in list(bytes(initial.value, "utf8"))])
+            initial = Array([Literal(byte, Types.INT) for byte in list(bytes(initial.value, "utf8"))], is_string=True)
+            
         if not no_semicolon:
             self.consume(TokenType.SEMICOLON, "Expected semicolon following let statement")
         

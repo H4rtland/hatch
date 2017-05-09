@@ -6,9 +6,11 @@ function void print_char(int n) {
     __internal_print_char(n);
 }
 
-/*function void print_string(string &data) {
+function void print_string(string data) {
+    let int x = 0;
     for(let int i=0; i<data; i=i+1) {
-        print_char(data[i]);
+        x = data[i];
+        __internal_print_char(x);
     }
-    print_char(10);
-}*/
+    print_char(10); // newline
+}

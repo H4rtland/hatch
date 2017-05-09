@@ -1,23 +1,6 @@
 import io;
 
 function void main() {
-    let int[3] numbers = [1, 2, 3];
-    print(sum(numbers));
-}
-
-
-function int sum(int[] numbers) {
-    let int total = 0;
-    for (let int i=0; i<numbers; i=i+1) {
-        total = total + numbers[i];
-    }
-    return total + sum2(numbers);
-}
-
-function int sum2(int[] numbers) {
-    let int total = 0;
-    for (let int i=0; i<numbers; i=i+1) {
-        total = total + numbers[i];
-    }
-    return total;
+    let string name = "Hello.";
+    print_string(name);
 }

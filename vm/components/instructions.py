@@ -236,6 +236,11 @@ def PRC(emulator, mem_flag, stack_flag, data):
         if not emulator.redirect_output:
             print(to_print, end="")
         emulator.output.append(to_print)
+    else:
+        to_print = str(bytes([data,]), "utf8")
+        if not emulator.redirect_output:
+            print(to_print, end="")
+        emulator.output.append(to_print)
         
 @debug
 def DUP(emulator, mem_flag, stack_flag, data):

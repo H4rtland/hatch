@@ -95,6 +95,8 @@ class Index:
         return f"<Index: {self.variable}[{self.index}]>"
     
     def resolve_type(self, namespace):
+        if namespace[self.variable.name].type == "string":
+            return TypeManager.get_type("int")
         return namespace[self.variable.name].type
         
 class Literal:
@@ -202,13 +204,16 @@ class For:
         print("    "*indent + "}")
         
 class Array:
-    def __init__(self, elements):
+    def __init__(self, elements, is_string=False):
         self.elements = elements
+        self.is_string = is_string
         
     def __repr__(self):
         return f"<Array: {self.elements}>"
     
     def resolve_type(self, namespace):
+        if self.is_string:
+            return TypeManager.get_type("string")
         if not len(set([element.resolve_type(namespace) for element in self.elements])) == 1:
             raise ExpressionValidationException("Multiple data types in array")
         return self.elements[0].resolve_type(namespace)

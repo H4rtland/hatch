@@ -25,4 +25,4 @@ class Types:
     INT = TypeManager.define_type(Type("int", 1))
     BOOL = TypeManager.define_type(Type("bool", 1))
     VOID = TypeManager.define_type(Type("void", 1))
-    # STRING = TypeManager.define_type(Type("string", None))
+    STRING = TypeManager.define_type(Type("string", None))

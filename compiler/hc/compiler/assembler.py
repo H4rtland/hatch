@@ -370,8 +370,11 @@ class Assembler:
                 #self.add_instruction(Instruction.MOV, mov(Register.OX, Register.BX))
             
             self.add_instruction(Instruction.OFF, 0)
-                
-                    
+        elif isinstance(statement.initial, Index):
+            self.parse_index(namespace, statement.initial.variable, statement.initial.index, register=Register.AX)
+            self.add_instruction(Instruction.PUSH, 1)
+            identifier = namespace.let(statement.name.lexeme, 1, statement.vtype.lexeme, False)
+            self.add_instruction(Instruction.STA, self.memory.id_on_stack(identifier), stack_flag=True)
         else:
             raise Exception("Unhandled let statement")
         
@@ -405,6 +408,9 @@ class Assembler:
                 self.parse_call(namespace, statement.value.callee, statement.value.args)
                 self.add_instruction(Instruction.MOV, mov(Register.AX, Register.FX)) # MOV AX <- FX
                 self.add_instruction(Instruction.STA, self.memory.id_on_stack(namespace.get_namespace()[statement.name]), stack_flag=True, mem_flag=True) # STA func_return
+        elif isinstance(statement.value, Index):
+            self.parse_index(namespace, statement.value.variable, statement.value.index, register=Register.AX)
+            self.add_instruction(Instruction.STA, self.memory.id_on_stack(namespace.get_namespace()[statement.name]), stack_flag=True, mem_flag=True)
         else:
             raise Exception("Unhandled assign statement")
         
@@ -490,6 +496,7 @@ class Assembler:
                 elif statement.callee.name == "__internal_print_char":
                     for arg in statement.args:
                         if isinstance(arg, Literal):
+                            print("Internal print char here", arg.value)
                             self.add_instruction(Instruction.PRC, arg.value)
                         else:
                             if not arg.name in namespace.get_namespace():
