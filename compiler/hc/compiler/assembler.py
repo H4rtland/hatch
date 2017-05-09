@@ -91,7 +91,7 @@ class Assembler:
                         self.function_addresses[function.name.lexeme] = len(self.instructions)
                         namespace = Namespace(self.globals, self.memory)
                         for arg in function.args:
-                            namespace.let(arg[1].lexeme, 1, arg[0].lexeme)
+                            namespace.let(arg[1].lexeme, 1, arg[0].lexeme, arg[3])
                         self.parse(namespace, function.body, is_function=True)
                         self.function_return_addresses[function.name.lexeme] = len(self.instructions)-1
                 #print(self.function_addresses)
@@ -173,7 +173,7 @@ class Assembler:
                 self.add_instruction(Instruction.LDA, arg.value) # LDA value
                 self.add_instruction(Instruction.STA, 1, stack_flag=True)
             elif isinstance(arg, Variable):
-                if namespace.get_type(arg.name) == "string":
+                if namespace.is_array(arg.name):
                     self.add_instruction(Instruction.DUP, self.memory.id_on_stack(namespace.get_namespace()[arg.name]))
                 else:
                     self.add_instruction(Instruction.LDA, self.memory.id_on_stack(namespace.get_namespace()[arg.name]), stack_flag=True)
@@ -316,7 +316,7 @@ class Assembler:
         
     def parse_let(self, namespace, statement):
         if isinstance(statement.initial, Literal):
-            identifier = namespace.let(statement.name.lexeme, 1, statement.vtype.lexeme)
+            identifier = namespace.let(statement.name.lexeme, 1, statement.vtype.lexeme, False)
             value = statement.initial.value
             self.add_instruction(Instruction.PUSH, 1)
             self.add_instruction(Instruction.LDA, int(value)) # LDA value
@@ -324,27 +324,27 @@ class Assembler:
         elif isinstance(statement.initial, Call):
             self.parse_call(namespace, statement.initial.callee, statement.initial.args)
             self.add_instruction(Instruction.MOV, mov(Register.AX, Register.FX)) # MOV AX <- FX
-            identifier = namespace.let(statement.name.lexeme, 1, statement.vtype.lexeme)
+            identifier = namespace.let(statement.name.lexeme, 1, statement.vtype.lexeme, False)
             self.add_instruction(Instruction.PUSH, 1)
             self.add_instruction(Instruction.STA, self.memory.id_on_stack(identifier), stack_flag=True) # STA func_return
         elif isinstance(statement.initial, Binary):
             self.parse_binary(namespace, statement.initial)
-            identifier = namespace.let(statement.name.lexeme, 1, statement.vtype.lexeme)
+            identifier = namespace.let(statement.name.lexeme, 1, statement.vtype.lexeme, False)
             self.add_instruction(Instruction.PUSH, 1)
             self.add_instruction(Instruction.STA, self.memory.id_on_stack(identifier), stack_flag=True) # STA sum
         elif isinstance(statement.initial, Variable):
             if statement.initial.name in self.function_names:
                 self.add_instruction(Instruction.LDA, FunctionAddress(statement.initial))
                 self.add_instruction(Instruction.PUSH, 1)
-                identifier = namespace.let(statement.name.lexeme, 1, statement.vtype.lexeme)
+                identifier = namespace.let(statement.name.lexeme, 1, statement.vtype.lexeme, False)
                 self.add_instruction(Instruction.STA, self.memory.id_on_stack(identifier), stack_flag=True)
             else:
                 self.add_instruction(Instruction.LDA, self.memory.id_on_stack(namespace.get_namespace()[statement.initial.name]), stack_flag=True)
                 self.add_instruction(Instruction.PUSH, 1)
-                identifier = namespace.let(statement.name.lexeme, 1, statement.vtype.lexeme)
+                identifier = namespace.let(statement.name.lexeme, 1, statement.vtype.lexeme, False)
                 self.add_instruction(Instruction.STA, self.memory.id_on_stack(identifier), stack_flag=True)
         elif isinstance(statement.initial, Array):
-            identifier = namespace.let(statement.name.lexeme, statement.length.value+1, statement.vtype.lexeme)
+            identifier = namespace.let(statement.name.lexeme, statement.length.value+1, statement.vtype.lexeme, True)
             self.add_instruction(Instruction.PUSH, statement.length.value+1)
             self.add_instruction(Instruction.LDA, statement.length.value)
             self.add_instruction(Instruction.STA, self.memory.id_on_stack(identifier), stack_flag=True)

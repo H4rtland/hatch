@@ -39,7 +39,7 @@ class TypeChecker:
     def check(self):
         namespace = dict(internal_functions)
         for function in self.ast:
-            args = [NamespaceVariable(TypeManager.get_type(arg[0].lexeme), False) for arg in function.args]
+            args = [NamespaceVariable(TypeManager.get_type(arg[0].lexeme), arg[3]) for arg in function.args]
             namespace[function.name.lexeme] = NamespaceFunction(TypeManager.get_type(function.rtype.lexeme), args)
         print(namespace)
         try:
@@ -60,7 +60,8 @@ class TypeChecker:
         namespace[self.current_function_identifier] = namespace[function.name.lexeme]
         for arg in function.args:
             # namespace[arg[1].lexeme] = Let(arg[0], arg[1].lexeme, 0, False, 0)
-            namespace[arg[1].lexeme] = NamespaceVariable(TypeManager.get_type(arg[0].lexeme), False)
+            # print(arg)
+            namespace[arg[1].lexeme] = NamespaceVariable(TypeManager.get_type(arg[0].lexeme), arg[3])
         self.check_branch(function.body, namespace)
         
     @checker_for(Block)
@@ -69,7 +70,7 @@ class TypeChecker:
             self.check_branch(statement, namespace)
             if isinstance(statement, Let):
                 # namespace[statement.name.lexeme] = statement
-                namespace[statement.name.lexeme] = NamespaceVariable(TypeManager.get_type(statement.vtype.lexeme), False)
+                namespace[statement.name.lexeme] = NamespaceVariable(TypeManager.get_type(statement.vtype.lexeme), statement.array)
             
     @checker_for(If)
     def check_if(self, if_statement: If, namespace):

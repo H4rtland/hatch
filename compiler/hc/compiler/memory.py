@@ -74,11 +74,13 @@ class Namespace:
         self.globals = {}
         self.types = {}
         self.stack_variables = 0
+        self.is_arrays = {}
         
-    def let(self, name, length, var_type):
+    def let(self, name, length, var_type, is_array):
         # addr = self.memory.allocate(length, var_type)
         self.locals[name] = uuid.uuid4().hex
         self.types[name] = var_type
+        self.is_arrays[name] = is_array
         self.stack_variables += 1
         self.memory.stack.append(self.locals[name])
         # print(f"Allocating variable {name} in namespace, {self.locals}, {self.get_namespace()}")
@@ -103,3 +105,11 @@ class Namespace:
     
     def get_type(self, variable):
         return self.get_types()[variable]
+    
+    def get_is_arrays(self):
+        if self.parent is None:
+            return self.is_arrays
+        return {**self.parent.get_is_arrays(), **self.is_arrays}
+    
+    def is_array(self, name):
+        return self.get_is_arrays()[name]

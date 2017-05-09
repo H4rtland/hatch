@@ -127,13 +127,18 @@ class ASTParser:
         arg_num = 0
         while not self.check(TokenType.RIGHT_BRACKET):
             reference = False
+            array = False
             arg_type = self.consume(TokenType.IDENTIFIER, f"Expected type for arg {arg_num}")
+            if self.check(TokenType.LEFT_SQUARE):
+                self.consume(TokenType.LEFT_SQUARE)
+                self.consume(TokenType.RIGHT_SQUARE, "Expected closing square bracket for array argument")
+                array = True
             #arg_type = TypeManager.get_type(arg_type.lexeme)
             if self.check(TokenType.AMPERSAND):
                 self.consume(TokenType.AMPERSAND)
                 reference = True
             arg_name = self.consume(TokenType.IDENTIFIER, f"Expected name for arg {arg_num}")
-            args.append((arg_type, arg_name, reference))
+            args.append((arg_type, arg_name, reference, array))
             if self.check(TokenType.RIGHT_BRACKET):
                 break
             self.consume(TokenType.COMMA, "Comma expected in function args after arg{arg_num}")

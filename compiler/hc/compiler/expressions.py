@@ -93,6 +93,9 @@ class Index:
         
     def __repr__(self):
         return f"<Index: {self.variable}[{self.index}]>"
+    
+    def resolve_type(self, namespace):
+        return namespace[self.variable.name].type
         
 class Literal:
     def __init__(self, value, type_):
@@ -120,7 +123,8 @@ class If:
         if not self.otherwise is None:
             print("    "*indent + "<Otherwise>")
             self.otherwise.print(indent+1)
-            
+
+
 class Call:
     def __init__(self, callee, paren, args):
         self.callee = callee
@@ -141,6 +145,11 @@ class Call:
         for i, (f, c) in enumerate(arg_pairs):
             if not (f.type == c.resolve_type(namespace)):
                 raise ExpressionValidationException(f"Argument mismatch: arg ({i}) {f.type} != {c.resolve_type(namespace)}")
+            value_is_array = isinstance(c, Array)
+            if isinstance(c, Variable):
+                value_is_array = value_is_array or namespace[c.name].is_array
+            if f.is_array != value_is_array:
+                raise ExpressionValidationException(f"Argument {i} was {'' if f.is_array else 'not '}expecting an array")
         
         return function.return_type
     
@@ -188,6 +197,9 @@ class For:
         
     def print(self, indent=0):
         print("    "*indent + f"<For: {self.declare}; {self.condition}; {self.action}>")
+        for statement in self.block.statements:
+            statement.print(indent+1)
+        print("    "*indent + "}")
         
 class Array:
     def __init__(self, elements):
@@ -195,3 +207,8 @@ class Array:
         
     def __repr__(self):
         return f"<Array: {self.elements}>"
+    
+    def resolve_type(self, namespace):
+        if not len(set([element.resolve_type(namespace) for element in self.elements])) == 1:
+            raise ExpressionValidationException("Multiple data types in array")
+        return self.elements[0].resolve_type(namespace)
