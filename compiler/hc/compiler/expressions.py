@@ -84,7 +84,6 @@ class Variable:
     
     def resolve_type(self, namespace):
         return namespace[self.name].type
-        #return TypeManager.get_type("int")
     
 class Index:
     def __init__(self, variable, index):
@@ -95,8 +94,8 @@ class Index:
         return f"<Index: {self.variable}[{self.index}]>"
     
     def resolve_type(self, namespace):
-        if namespace[self.variable.name].type == "string":
-            return TypeManager.get_type("int")
+        if namespace[self.variable.name].type == Types.STRING:
+            return Types.INT
         return namespace[self.variable.name].type
         
 class Literal:
@@ -213,7 +212,7 @@ class Array:
     
     def resolve_type(self, namespace):
         if self.is_string:
-            return TypeManager.get_type("string")
+            return Types.STRING
         if not len(set([element.resolve_type(namespace) for element in self.elements])) == 1:
             raise ExpressionValidationException("Multiple data types in array")
         return self.elements[0].resolve_type(namespace)

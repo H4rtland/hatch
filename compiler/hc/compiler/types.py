@@ -5,7 +5,7 @@ class Type:
         self.indices = indices
         
     def __repr__(self):
-        return f"{self.name}"
+        return f"T:{self.name}"
 
 class TypeManager:
     defined_types = {}

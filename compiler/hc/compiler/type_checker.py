@@ -17,8 +17,8 @@ NamespaceFunction = namedtuple("NamespaceFunction", ["return_type", "args"])
 NamespaceVariable = namedtuple("NamespaceVariable", ["type", "is_array"])
 
 internal_functions = {
-    "__internal_print":NamespaceFunction(TypeManager.get_type("void"), [NamespaceVariable(TypeManager.get_type("int"), False)]),
-    "__internal_print_char":NamespaceFunction(TypeManager.get_type("void"), [NamespaceVariable(TypeManager.get_type("int"), False)]),
+    "__internal_print":NamespaceFunction(Types.VOID, [NamespaceVariable(Types.INT, False)]),
+    "__internal_print_char":NamespaceFunction(Types.VOID, [NamespaceVariable(Types.INT, False)]),
 }
     
 
