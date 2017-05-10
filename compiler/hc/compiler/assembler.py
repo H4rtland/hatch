@@ -74,8 +74,8 @@ class Assembler:
             if all(isinstance(inst, int) for inst in self.instructions):
                 # no more functions left to compile
                 break
-            #print(self.instructions)
-            time.sleep(0.1)
+            
+            # time.sleep(0.1)
             names = []
             functions_remaining = []
             for instruction in self.instructions:
@@ -319,7 +319,6 @@ class Assembler:
                 self.parse(Namespace(namespace, self.memory), statement.otherwise)
             self.instructions[then_end_index] = len(self.instructions)
         elif isinstance(statement.condition, Variable):
-            print(statement.condition.name)
             self.add_instruction(Instruction.LDA, self.memory.id_on_stack(namespace.get_namespace()[statement.condition.name]), stack_flag=True)
             self.add_instruction(Instruction.LDB, 1)
             self.add_instruction(Instruction.CMP, 0)
@@ -467,7 +466,7 @@ class Assembler:
                 
         
     def parse(self, namespace, block, is_function=False, dont_free=False, parameter_identifiers=None):
-        print("Parsing a block with namespace", namespace.locals, namespace.get_namespace())
+        # print("Parsing a block with namespace", namespace.locals, namespace.get_namespace())
         if parameter_identifiers is None:
             parameter_identifiers = []
         already_popped = dont_free
@@ -500,7 +499,6 @@ class Assembler:
                 elif statement.callee.name == "__internal_print_char":
                     for arg in statement.args:
                         if isinstance(arg, Literal):
-                            print("Internal print char here", arg.value)
                             self.add_instruction(Instruction.PRC, arg.value)
                         else:
                             if not arg.name in namespace.get_namespace():
@@ -532,7 +530,6 @@ class Assembler:
                 elif isinstance(statement.value, Binary):
                     self.parse_binary(namespace, statement.value)
                     self.add_instruction(Instruction.MOV, mov(Register.FX, Register.AX)) # MOV FX <- AX
-                    print("Returning binary", namespace.locals, namespace.get_namespace())
                     if len(namespace.get_namespace(no_globals=True)) > 0:
                         self.free_local_stack(namespace, parameter_identifiers=parameter_identifiers, is_return=True)
                     self.add_instruction(Instruction.RET, 0, stack_flag=True)

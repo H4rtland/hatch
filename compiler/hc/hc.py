@@ -1,5 +1,6 @@
 import sys
 import os.path
+import time
 
 from compiler.tokenizer import Tokenizer
 from compiler.ast import ASTParser
@@ -37,6 +38,7 @@ def compile_file(filename, debug):
     return compile(source, debug=debug, filename=filename)
 
 if __name__ == "__main__":
+    start_time = time.perf_counter()
     instructions, addresses = compile_file("testfile.hatch", True)
     
     with open("testfile.hb", "wb") as output_file:
@@ -57,5 +59,6 @@ if __name__ == "__main__":
             elif op&0b01000000:
                 surround1, surround2 = "$", ""
             output_file.write(f"{i*2}: {Instruction(op&0b11111).name} {surround1}{data}{surround2}\n")
-        
-    print("Compilation complete")
+    
+    duration = time.perf_counter()-start_time
+    print(f"Compilation complete, filesize={len(instructions)} bytes, time={duration:.04f} seconds")

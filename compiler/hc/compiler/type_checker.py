@@ -100,6 +100,18 @@ class TypeChecker:
     def check_assign(self, assign_statement: Assign, namespace):
         assigning_to_type = namespace[assign_statement.name].type
         assigned_type = assign_statement.value.resolve_type(namespace)
-        print(assigning_to_type, assigned_type)
         if not assigning_to_type == assigned_type:
             self.print_error(f"Assignment type mismatch: {assigning_to_type} != {assigned_type}")
+            
+    @checker_for(For)
+    def check_for(self, for_loop: For, namespace):
+        self.check_branch(for_loop.declare, namespace)
+        if isinstance(for_loop.declare, Let):
+            namespace[for_loop.declare.name.lexeme] = NamespaceVariable(TypeManager.get_type(for_loop.declare.vtype.lexeme), for_loop.declare.array)
+        #self.check_branch(for_loop.condition, namespace)
+        self.check_branch(for_loop.action, namespace)
+        self.check_branch(for_loop.block, namespace)
+        
+    @checker_for(Binary)
+    def check_binary(self, binary: Binary, namespace):
+        binary.resolve_type(namespace)

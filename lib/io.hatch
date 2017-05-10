@@ -12,5 +12,5 @@ function void print_string(string data) {
         x = data[i];
         __internal_print_char(x);
     }
-    print_char(10); // newline
+    __internal_print_char(10); // newline
 }

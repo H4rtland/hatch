@@ -1,17 +1,16 @@
 import io;
 
-function int triangle_number(int n) {
-    if (n == 1) {
-        return 1;
-    } else {
-        return n + triangle_number(n-1);
-    }
+function void main() {
+    let int[3] numbers = [1, 2, 3];
+    print(sum(numbers));
+    print_string("Hi.");
 }
 
-function int main() {
-    print(triangle_number(1));
-    print(triangle_number(2));
-    print(triangle_number(3));
-    print(triangle_number(4));
-    print(triangle_number(5));
+
+function int sum(int[] numbers) {
+    let int total = 0;
+    for (let int i=0; i<numbers; i=i+1) {
+        total = total + numbers[i];
+    }
+    return total;
 }
