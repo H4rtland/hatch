@@ -45,6 +45,8 @@ class TokenType(Enum):
     
     
 class Token:
+    current_sourcelines = []
+    current_sourcefile = ""
     def __init__(self, token_type, lexeme, literal, line, char):
         self.token_type = token_type
         self.lexeme = lexeme
@@ -52,6 +54,9 @@ class Token:
         self.line = line
         self.char = char
         self.start = 0
+        self.source_line = Token.current_sourcelines[self.line-1].lstrip()
+        self.source_file = Token.current_sourcefile
+        self.source_line_num = self.line
     
     def __repr__(self):
         return f"<Token: {self.token_type}, {self.lexeme}, {self.literal} (line {self.line})>"
@@ -86,12 +91,14 @@ KEYWORDS = {
 }
     
 class Tokenizer:
-    def __init__(self, hatch_source):
+    def __init__(self, hatch_source, filename):
         self.hatch_source = hatch_source
         self.position = 0
         self.line = 1
         self.tokens = []
         self.last_newline = 0
+        Token.current_sourcelines = self.hatch_source.split("\n")
+        Token.current_sourcefile = filename
     
     def next(self):
         self.position += 1

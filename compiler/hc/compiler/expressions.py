@@ -84,6 +84,8 @@ class Variable:
         return f"<Variable: {self.name}>"
     
     def resolve_type(self, namespace):
+        if self.name not in namespace:
+            raise ExpressionValidationException(f"Use of undefined variable '{self.name}'")
         return namespace[self.name].type
     
 class Index:
@@ -140,6 +142,8 @@ class Call:
         return f"<Call: func {self.callee}, args {self.args}>"
     
     def resolve_type(self, namespace):
+        if self.callee.name not in namespace:
+            raise ExpressionValidationException(f"Call to undefined function '{self.callee.name}'")
         function = namespace[self.callee.name]
         if len(function.args) != len(self.args):
             raise ExpressionValidationException(f"Wrong number of args: expected {len(function.args)}, got {len(self.args)}")

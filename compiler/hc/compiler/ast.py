@@ -69,9 +69,13 @@ class ASTParser:
         
     def parse(self):
         while not self.at_end():
-            next_token = self.declaration()
-            if not next_token is None:
-                self.statements.append(next_token)
+            token = self.tokens[self.position]
+            next_expression = self.declaration()
+            if not next_expression is None:
+                next_expression.source_line = token.source_line
+                next_expression.source_file = token.source_file
+                next_expression.source_line_num = token.source_line_num
+                self.statements.append(next_expression)
         return self.statements, self.had_error
     
     def declaration(self, no_let_semicolon=False):
@@ -116,7 +120,7 @@ class ASTParser:
         if op.exists(filename):
             with open(filename, "r") as import_file:
                 source = import_file.read()
-            tokenizer = Tokenizer(source)
+            tokenizer = Tokenizer(source, filename)
             tokens = tokenizer.tokenize(main=False)
             self.insert(tokens)
         else:
@@ -161,7 +165,12 @@ class ASTParser:
         self.consume(TokenType.LEFT_BRACE, "Expected '{' to open block")
         statements = []
         while not self.check(TokenType.RIGHT_BRACE) and not self.at_end():
-            statements.append(self.declaration())
+            starting_token = self.tokens[self.position]
+            next_expression = self.declaration()
+            next_expression.source_line = starting_token.source_line
+            next_expression.source_file = starting_token.source_file
+            next_expression.source_line_num = starting_token.source_line_num
+            statements.append(next_expression)
         self.consume(TokenType.RIGHT_BRACE, "Expected '}' to close block")
         return Block(statements)
     

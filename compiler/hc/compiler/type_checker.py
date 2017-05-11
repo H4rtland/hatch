@@ -1,5 +1,8 @@
 import uuid
+import sys
 from collections import namedtuple
+
+import time
 
 from compiler.expressions import *
 
@@ -26,6 +29,7 @@ class TypeChecker:
     def __init__(self, source, ast):
         self.source = source.split("\n")
         self.ast = ast
+        self.checking_expression = None
         
         # Use this identifier to find current function in return checker.
         # Use a uuid to prevent overlap with any user defined function name
@@ -33,8 +37,12 @@ class TypeChecker:
         self.current_function_identifier = uuid.uuid4().hex
         
     def print_error(self, error):
-        #print(error, file=sys.stderr)
-        raise Exception(error)
+        time.sleep(0.01)
+        print(f"File: {self.checking_expression.source_file}", file=sys.stderr)
+        print(f"Line {self.checking_expression.source_line_num}: {self.checking_expression.source_line}", file=sys.stderr)
+        print(error, file=sys.stderr)
+        sys.exit(0)
+        #raise Exception(error)
         
     def check(self):
         namespace = dict(internal_functions)
@@ -51,6 +59,7 @@ class TypeChecker:
     def check_branch(self, branch, namespace):
         if branch.__class__ in expression_checkers:
             # copy namespace so modifications only get passed down, not back up
+            self.checking_expression = branch
             expression_checkers[branch.__class__](self, branch, dict(namespace))
         else:
             print(f"TypeChecker: Unchecked branch: {branch.__class__.__name__}")

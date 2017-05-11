@@ -8,8 +8,8 @@ from compiler.type_checker import TypeChecker
 from compiler.assembler import Assembler
 from compiler.instructions import Instruction
 
-def compile(source, debug=False, filename="function void main() {}"):
-    tokenizer = Tokenizer(source)
+def compile(source, debug=False, filename="main.hatch"):
+    tokenizer = Tokenizer(source, filename)
     tokens = tokenizer.tokenize()
     
     ast = ASTParser(tokens, source, filename, compiler=[compile, compile_file])
