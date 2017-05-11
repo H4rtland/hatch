@@ -26,3 +26,4 @@ class Types:
     BOOL = TypeManager.define_type(Type("bool", 1))
     VOID = TypeManager.define_type(Type("void", 1))
     STRING = TypeManager.define_type(Type("string", None))
+    CHAR = TypeManager.define_type(Type("char", 1))

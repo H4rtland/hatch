@@ -8,6 +8,7 @@ from compiler.types import Types, TypeManager
 
 class ASTParser:
     def __init__(self, tokens, source, filename, compiler):
+        print(tokens)
         self.tokens = tokens
         self.sourcelines = source.split("\n")
         self.position = 0
@@ -285,9 +286,14 @@ class ASTParser:
             if self.previous().token_type == TokenType.NUMBER:
                 if not (0 <= self.previous().literal <= 255):
                     self.print_error(self.previous(), "Integer literal outside range 0-255")
+                if self.check(TokenType.IDENTIFIER):
+                    if self.next().lexeme.lower() == "c":
+                        char = Literal(self.previous().literal, Types.CHAR)
+                        self.consume(TokenType.IDENTIFIER)
+                        return char
                 return Literal(self.previous().literal, Types.INT)
             elif self.previous().token_type == TokenType.STRING:
-                string_array = Array([Literal(byte, Types.INT) for byte in list(bytes(self.previous().literal, "utf8"))], is_string=True)
+                string_array = Array([Literal(byte, Types.CHAR) for byte in list(bytes(self.previous().literal, "utf8"))], is_string=True)
                 return string_array
         
         if self.match(TokenType.IDENTIFIER):

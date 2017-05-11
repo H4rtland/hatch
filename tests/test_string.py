@@ -5,10 +5,12 @@ hatch = """
 import io;
 
 function void main() {
-    let string hello = "Hello, world!";
+    let string hello = "Hello!";
     print_string(hello);
     print_char(hello[1]);
-    print_string("\nEnd");
+    print_string("\nWorld");
+    let char H = hello[0];
+    print_char(H);
 }
 """
 
@@ -18,4 +20,4 @@ def test_string():
     virtual_machine = vm.OctoEngine(True)
     virtual_machine.load(instructions)
     output = virtual_machine.run()
-    assert output == list("Hello, world!\ne\nEnd\n")
+    assert output == list("Hello!\ne\nWorld\nH")

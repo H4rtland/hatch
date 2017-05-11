@@ -18,7 +18,7 @@ NamespaceVariable = namedtuple("NamespaceVariable", ["type", "is_array"])
 
 internal_functions = {
     "__internal_print":NamespaceFunction(Types.VOID, [NamespaceVariable(Types.INT, False)]),
-    "__internal_print_char":NamespaceFunction(Types.VOID, [NamespaceVariable(Types.INT, False)]),
+    "__internal_print_char":NamespaceFunction(Types.VOID, [NamespaceVariable(Types.CHAR, False)]),
 }
     
 
@@ -88,6 +88,8 @@ class TypeChecker:
             
     @checker_for(Let)
     def check_let(self, let_statement: Let, namespace):
+        if TypeManager.get_type(let_statement.vtype.lexeme) == Types.CHAR and let_statement.initial.resolve_type(namespace) == Types.INT:
+            return
         if not TypeManager.get_type(let_statement.vtype.lexeme) == let_statement.initial.resolve_type(namespace):
             self.print_error(f"Let statement type mismatch: "
                              f"{TypeManager.get_type(let_statement.vtype.lexeme)} != {let_statement.initial.resolve_type(namespace)}")

@@ -1,16 +1,9 @@
 import io;
 
 function void main() {
-    let int[3] numbers = [1, 2, 3];
-    print(sum(numbers));
-    print_string("Hi.");
-}
-
-
-function int sum(int[] numbers) {
-    let int total = 0;
-    for (let int i=0; i<numbers; i=i+1) {
-        total = total + numbers[i];
-    }
-    return total;
+    let string s = "Hello.";
+    print_string(s);
+    print_char(s[1]);
+    let char l = s[3];
+    print_char(l);
 }

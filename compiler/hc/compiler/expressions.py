@@ -25,11 +25,12 @@ class Function:
         return TypeManager.get_type(self.rtype.lexeme)
     
     def print(self, indent=0):
-        print("    "*indent + f"<Function: {self.rtype} {self.name.lexeme} ({self.args})>")
+        args = ", ".join([type_.lexeme + " " + name.lexeme for (type_, name, _, _) in self.args])
+        print("    "*indent + f"<Function: {self.rtype.lexeme} {self.name.lexeme} ({args})>")
         self.body.print(indent+1)
         
     def __repr__(self):
-        return f"<Function: {self.rtype} {self.name.lexeme} ({self.args})>"
+        return f"<Function: {self.rtype.lexeme} {self.name.lexeme} ({self.args})>"
         
 class Expression:
     def __init__(self, expression):
@@ -95,7 +96,7 @@ class Index:
     
     def resolve_type(self, namespace):
         if namespace[self.variable.name].type == Types.STRING:
-            return Types.INT
+            return Types.CHAR
         return namespace[self.variable.name].type
         
 class Literal:
@@ -145,6 +146,9 @@ class Call:
         arg_pairs = zip(function.args, self.args)
         for i, (f, c) in enumerate(arg_pairs):
             if not (f.type == c.resolve_type(namespace)):
+                print(function)
+                print(f, c)
+                print(f.type, c.resolve_type(namespace))
                 raise ExpressionValidationException(f"Argument mismatch: arg ({i}) {f.type} != {c.resolve_type(namespace)}")
             value_is_array = isinstance(c, Array)
             if isinstance(c, Variable):

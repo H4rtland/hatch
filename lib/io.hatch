@@ -2,15 +2,15 @@ function void print(int n) {
     __internal_print(n);
 }
 
-function void print_char(int n) {
+function void print_char(char n) {
     __internal_print_char(n);
 }
 
 function void print_string(string data) {
-    let int x = 0;
+    let char x = 0;
     for(let int i=0; i<data; i=i+1) {
         x = data[i];
         __internal_print_char(x);
     }
-    __internal_print_char(10); // newline
+    __internal_print_char(10c); // newline
 }
