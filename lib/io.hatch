@@ -7,7 +7,7 @@ function void print_char(char n) {
 }
 
 function void print_string(string data) {
-    let char x = 0;
+    let char x = 0c;
     for(let int i=0; i<data; i=i+1) {
         x = data[i];
         __internal_print_char(x);

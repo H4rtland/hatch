@@ -88,8 +88,8 @@ class TypeChecker:
             
     @checker_for(Let)
     def check_let(self, let_statement: Let, namespace):
-        if TypeManager.get_type(let_statement.vtype.lexeme) == Types.CHAR and let_statement.initial.resolve_type(namespace) == Types.INT:
-            return
+        if TypeManager.get_type(let_statement.vtype.lexeme) == Types.VOID:
+            self.print_error("Cannot create a void variable")
         if not TypeManager.get_type(let_statement.vtype.lexeme) == let_statement.initial.resolve_type(namespace):
             self.print_error(f"Let statement type mismatch: "
                              f"{TypeManager.get_type(let_statement.vtype.lexeme)} != {let_statement.initial.resolve_type(namespace)}")
