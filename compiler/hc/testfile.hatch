@@ -2,9 +2,4 @@ import io;
 
 function void main() {
     print_string("\na");
-    let void x = nothing();
-    print(x);
-}
-
-function void nothing() {
 }
