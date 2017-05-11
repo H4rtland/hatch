@@ -1,6 +1,7 @@
 import sys
 import os
 import os.path as op
+import codecs
 
 from compiler.tokenizer import TokenType, Tokenizer
 from compiler.expressions import *
@@ -293,7 +294,8 @@ class ASTParser:
                         return char
                 return Literal(self.previous().literal, Types.INT)
             elif self.previous().token_type == TokenType.STRING:
-                string_array = Array([Literal(byte, Types.CHAR) for byte in list(bytes(self.previous().literal, "utf8"))], is_string=True)
+                unescaped_string = codecs.getdecoder("unicode_escape")(self.previous().literal)[0]
+                string_array = Array([Literal(byte, Types.CHAR) for byte in list(bytes(unescaped_string, "utf8"))], is_string=True)
                 return string_array
         
         if self.match(TokenType.IDENTIFIER):

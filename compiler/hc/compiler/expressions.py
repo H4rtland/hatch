@@ -176,10 +176,10 @@ class Binary:
         
     def resolve_type(self, namespace):
         if not self.left.resolve_type(namespace) == self.right.resolve_type(namespace):
-             if (self.left.resolve_type(), self.right.resolve_type()) in [(Types.INT, Types.STRING), (Types.STRING, Types.INT)]:
+             if (self.left.resolve_type(namespace), self.right.resolve_type(namespace)) in [(Types.INT, Types.STRING), (Types.STRING, Types.INT)]:
                  pass
              else:
-                raise ExpressionValidationException(f"Binary type mismatch {self.left.resolve_type(namespace)} != {self.right.resolve_type(namespace)}")
+                 raise ExpressionValidationException(f"Binary type mismatch {self.left.resolve_type(namespace)} != {self.right.resolve_type(namespace)}")
         if self.operator.token_type in [TokenType.EQUAL_EQUAL, TokenType.NOT_EQUAL, TokenType.GREATER_EQUAL, TokenType.LESS_EQUAL]:
             return Types.BOOL
         else:

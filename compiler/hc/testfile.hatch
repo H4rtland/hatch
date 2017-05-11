@@ -1,9 +1,5 @@
 import io;
 
 function void main() {
-    let string s = "Hello.";
-    print_string(s);
-    print_char(s[1]);
-    let char l = s[3];
-    print_char(l);
+    print_string("\na");
 }
