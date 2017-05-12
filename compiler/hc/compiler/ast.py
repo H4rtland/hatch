@@ -99,6 +99,8 @@ class ASTParser:
             return self.if_statement()
         if self.match(TokenType.FOR):
             return self.for_()
+        if self.match(TokenType.WHILE):
+            return self.while_loop()
         
         return self.expression_statement()
     
@@ -363,3 +365,12 @@ class ASTParser:
         body = self.statement()
 
         return For(declare, condition, action, body)
+    
+    def while_loop(self):
+        self.consume(TokenType.LEFT_BRACKET, "Expected '(' after 'while'")
+        condition = self.expression()
+        self.consume(TokenType.RIGHT_BRACKET, "Expected ')' to close while statement")
+        
+        body = self.statement()
+        
+        return While(condition, body)

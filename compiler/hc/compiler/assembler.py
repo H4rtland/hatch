@@ -452,15 +452,37 @@ class Assembler:
         self.add_instruction(Instruction.CMP, 0)
         self.add_instruction(compare_inst, 0)
         compare_data_byte = len(self.instructions)-1
-        self.parse(namespace, statement.block, dont_free=True)
+        block_namespace = Namespace(namespace, self.memory)
+        self.parse(block_namespace, statement.block, dont_free=True)
         action_start = len(self.instructions)
         self.parse_assign(namespace, statement.action)
+        self.free_local_stack(block_namespace)
         self.add_instruction(Instruction.JMP, comparison_start)
         end_addr = len(self.instructions)
         self.instructions[compare_data_byte] = end_addr
         
         self.memory.unstack(len(namespace.locals))
         self.add_instruction(Instruction.POP, len(namespace.locals))
+        
+    def parse_while(self, namespace, statement):
+        compare_inst = {
+            TokenType.EQUAL_EQUAL: Instruction.JNE,
+            TokenType.LESS: Instruction.JGE,
+            TokenType.GREATER: Instruction.JLE,
+            TokenType.LESS_EQUAL: Instruction.JG,
+            TokenType.GREATER_EQUAL: Instruction.JL,
+        }[statement.condition.operator.token_type]
+        comparison_start = len(self.instructions)
+        self.parse_comparison(namespace, statement.condition)
+        self.add_instruction(Instruction.CMP, 0)
+        self.add_instruction(compare_inst, 0)
+        compare_data_byte = len(self.instructions)-1
+        block_namespace = Namespace(namespace, self.memory)
+        self.parse(block_namespace, statement.block, dont_free=True)
+        self.free_local_stack(block_namespace)
+        self.add_instruction(Instruction.JMP, comparison_start)
+        end_addr = len(self.instructions)
+        self.instructions[compare_data_byte] = end_addr
         
         
                 
@@ -539,6 +561,9 @@ class Assembler:
                 
             elif isinstance(statement, For):
                 self.parse_for(Namespace(namespace, self.memory), statement)
+                
+            elif isinstance(statement, While):
+                self.parse_while(Namespace(namespace, self.memory), statement)
                 
             else:
                 raise Exception("Unhandled statement type")

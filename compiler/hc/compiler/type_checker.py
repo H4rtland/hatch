@@ -119,9 +119,19 @@ class TypeChecker:
         self.check_branch(for_loop.declare, namespace)
         if isinstance(for_loop.declare, Let):
             namespace[for_loop.declare.name.lexeme] = NamespaceVariable(TypeManager.get_type(for_loop.declare.vtype.lexeme), for_loop.declare.array)
-        #self.check_branch(for_loop.condition, namespace)
+        self.check_branch(for_loop.condition, namespace)
+        if not for_loop.condition.resolve_type(namespace) == Types.BOOL:
+            self.print_error("Expected boolean expression for while loop condition")
         self.check_branch(for_loop.action, namespace)
         self.check_branch(for_loop.block, namespace)
+        
+    @checker_for(While)
+    def check_while(self, while_loop: While, namespace):
+        self.check_branch(while_loop.condition, namespace)
+        print(while_loop.condition.resolve_type(namespace))
+        if not while_loop.condition.resolve_type(namespace) == Types.BOOL:
+            self.print_error("Expected boolean expression for while loop condition")
+        self.check_branch(while_loop.block, namespace)
         
     @checker_for(Binary)
     def check_binary(self, binary: Binary, namespace):

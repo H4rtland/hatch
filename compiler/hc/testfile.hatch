@@ -1,9 +1,9 @@
 import io;
 
 function void main() {
-    print(sum(5, 6));
-}
-
-function int sum(int a, int b) {
-    return a + b;
+    let int i = 0;
+    while (i < 10) {
+        print(i);
+        i = i + 1;
+    }
 }

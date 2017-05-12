@@ -184,7 +184,9 @@ class Binary:
                  pass
              else:
                  raise ExpressionValidationException(f"Binary type mismatch {self.left.resolve_type(namespace)} != {self.right.resolve_type(namespace)}")
-        if self.operator.token_type in [TokenType.EQUAL_EQUAL, TokenType.NOT_EQUAL, TokenType.GREATER_EQUAL, TokenType.LESS_EQUAL]:
+        if self.operator.token_type in [TokenType.EQUAL_EQUAL, TokenType.NOT_EQUAL,
+                                        TokenType.GREATER_EQUAL, TokenType.LESS_EQUAL,
+                                        TokenType.LESS, TokenType.GREATER]:
             return Types.BOOL
         else:
             return self.left.resolve_type(namespace)
@@ -212,6 +214,17 @@ class For:
         
     def print(self, indent=0):
         print("    "*indent + f"<For: {self.declare}; {self.condition}; {self.action}>")
+        for statement in self.block.statements:
+            statement.print(indent+1)
+        print("    "*indent + "}")
+        
+class While:
+    def __init__(self, condition, block):
+        self.condition = condition
+        self.block = block
+
+    def print(self, indent=0):
+        print("    "*indent + f"<While: {self.condition}>")
         for statement in self.block.statements:
             statement.print(indent+1)
         print("    "*indent + "}")
