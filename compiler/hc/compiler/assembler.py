@@ -151,7 +151,7 @@ class Assembler:
             raise Exception("Unhandled binary right input")
             
         
-        if binary.operator.token_type ==  TokenType.PLUS:
+        if binary.operator.token_type == TokenType.PLUS:
             self.add_instruction(Instruction.ADD, 0) # ADD
         elif binary.operator.token_type == TokenType.MINUS:
             self.add_instruction(Instruction.NEG, 0) # NEG
@@ -252,6 +252,11 @@ class Assembler:
             self.add_instruction(load_inst, self.memory.id_on_stack(namespace.get_namespace()[index.name]), stack_flag=True)
             self.add_instruction(Instruction.INC, 255-register.value)
             self.add_instruction(Instruction.MOV, mov(Register.OX, register))
+        elif isinstance(index, Binary):
+            self.parse_binary(namespace, index)
+            self.add_instruction(Instruction.INC, 255-Register.AX.value)
+            self.add_instruction(Instruction.MOV, mov(Register.OX, Register.AX))
+            
         else:
             raise Exception("Unhandled index get")
         load_inst = {
@@ -273,6 +278,8 @@ class Assembler:
         elif isinstance(condition.left, Call):
             self.parse_call(namespace, condition.left.callee, condition.left.args)
             self.add_instruction(Instruction.MOV, mov(Register.AX, Register.FX))
+        elif isinstance(condition.left, Index):
+            self.parse_index(namespace, condition.left.variable, condition.left.index, register=Register.AX)
         else:
             raise Exception("Unhandled if statement condition")
         
@@ -283,6 +290,8 @@ class Assembler:
         elif isinstance(condition.right, Call):
             self.parse_call(namespace, condition.right.callee, condition.right.args)
             self.add_instruction(Instruction.MOV, mov(Register.BX, Register.FX))
+        elif isinstance(condition.right, Index):
+            self.parse_index(namespace, condition.left.variable, condition.left.index, register=Register.BX)
         else:
             raise Exception("Unhandled if statement condition")
     
@@ -300,6 +309,12 @@ class Assembler:
             if statement.condition.operator.token_type == TokenType.EQUAL_EQUAL:
                 true_inst = Instruction.JE
                 false_inst = Instruction.JNE
+            elif statement.condition.operator.token_type == TokenType.LESS:
+                true_inst = Instruction.JL
+                false_inst = Instruction.JGE
+            elif statement.condition.operator.token_type == TokenType.GREATER:
+                true_inst = Instruction.JG
+                false_inst = Instruction.JLE
             else:
                 raise Exception("Unhandled if condition operator")
                 
@@ -387,6 +402,15 @@ class Assembler:
             self.add_instruction(Instruction.LDA, value) # LDA value
             self.add_instruction(Instruction.STA, self.memory.id_on_stack(namespace.get_namespace()[statement.name]), stack_flag=True, mem_flag=True) # STA [var_name]
         elif isinstance(statement.value, Binary):
+            # increment in place if variable and +1
+            if isinstance(statement.value.left, Variable):
+                if statement.value.left.name == statement.name:
+                    if isinstance(statement.value.right, Literal):
+                        if statement.value.right.value == 1:
+                            if statement.value.operator.token_type == TokenType.PLUS:
+                                self.add_instruction(Instruction.OFF, 0)
+                                self.add_instruction(Instruction.INC, self.memory.id_on_stack(namespace.get_namespace()[statement.value.left.name]), stack_flag=True)
+                                return
             self.parse_binary(namespace, statement.value)
             self.add_instruction(Instruction.STA, self.memory.id_on_stack(namespace.get_namespace()[statement.name]), stack_flag=True, mem_flag=True) # STA [var_name]
         elif isinstance(statement.value, Variable):
@@ -420,6 +444,8 @@ class Assembler:
             self.add_instruction(Instruction.LDA, statement.right.value)
         elif isinstance(statement.right, Variable):
             self.add_instruction(Instruction.LDA, self.memory.id_on_stack(namespace.get_namespace()[statement.right.name]), stack_flag=True)
+        elif isinstance(statement.right, Index):
+            self.parse_index(namespace, statement.right.variable, statement.right.index, register=Register.AX)
         else:
             raise Exception("Unhandled index assign value")
         
@@ -428,6 +454,10 @@ class Assembler:
             self.add_instruction(Instruction.OFF, index+1)
         elif isinstance(statement.left.index, Variable):
             self.add_instruction(Instruction.LDB, self.memory.id_on_stack(namespace.get_namespace()[statement.left.index.name]), stack_flag=True)
+            self.add_instruction(Instruction.INC, 255-Register.BX.value)
+            self.add_instruction(Instruction.MOV, mov(Register.OX, Register.BX))
+        elif isinstance(statement.left.index, Binary):
+            self.parse_binary(namespace, statement.left.index)
             self.add_instruction(Instruction.INC, 255-Register.BX.value)
             self.add_instruction(Instruction.MOV, mov(Register.OX, Register.BX))
         else:
@@ -515,9 +545,10 @@ class Assembler:
                     raise Exception(f"Call to undefined function {statement.callee.name}")
                 if statement.callee.name == "__internal_print":
                     for arg in statement.args:
-                        if not arg.name in namespace.get_namespace():
-                            raise Exception(f"Call with uninitialised variable {arg.name}")
-                        self.add_instruction(Instruction.PRX, self.memory.id_on_stack(namespace.get_namespace()[arg.name]), stack_flag=True) # PRX var
+                        if isinstance(arg, Variable):
+                            if not arg.name in namespace.get_namespace():
+                                raise Exception(f"Call with uninitialised variable {arg.name}")
+                            self.add_instruction(Instruction.PRX, self.memory.id_on_stack(namespace.get_namespace()[arg.name]), stack_flag=True) # PRX var
                 elif statement.callee.name == "__internal_print_char":
                     for arg in statement.args:
                         if isinstance(arg, Literal):

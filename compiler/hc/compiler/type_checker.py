@@ -128,7 +128,6 @@ class TypeChecker:
     @checker_for(While)
     def check_while(self, while_loop: While, namespace):
         self.check_branch(while_loop.condition, namespace)
-        print(while_loop.condition.resolve_type(namespace))
         if not while_loop.condition.resolve_type(namespace) == Types.BOOL:
             self.print_error("Expected boolean expression for while loop condition")
         self.check_branch(while_loop.block, namespace)

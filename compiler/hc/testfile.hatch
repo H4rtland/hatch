@@ -1,9 +1,11 @@
-import io;
+import algorithm;
 
 function void main() {
-    let int i = 0;
-    while (i < 10) {
-        print(i);
-        i = i + 1;
+    let int[3] numbers = [7, 5, 2];
+    sort(numbers);
+    let int k = 0;
+    for(let int i=0; i<numbers; i=i+1) {
+        k = numbers[i];
+        __internal_print(k);
     }
 }

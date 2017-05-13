@@ -1,0 +1,23 @@
+/*
+ * Sort an array of integers in place (bubble sort)
+ */
+function void sort(int[] numbers) {
+    let int a = 0;
+    let int b = 0;
+    let int i2 = 0;
+    let bool done = false;
+    let int l = numbers-1;
+    while(done == false) {
+        done = true;
+        for(let int i=0; i<l; i=i+1) {
+            i2 = i+1;
+            a = numbers[i];
+            b = numbers[i2];
+            if (a > b) {
+                numbers[i2] = a;
+                numbers[i] = b;
+                done = false;
+            }
+        }
+    }
+}
