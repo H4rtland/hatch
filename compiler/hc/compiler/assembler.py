@@ -271,7 +271,7 @@ class Assembler:
     
     def parse_comparison(self, namespace, condition):
         if isinstance(condition.left, Literal):
-            self.add_instruction(Instruction.LDA, condition.left.value)
+            self.add_instruction(Instruction.LDA, int(condition.left.value))
         elif isinstance(condition.left, Variable):
             #if self.variable_exists(namespace, condition.left):
             self.add_instruction(Instruction.LDA, self.memory.id_on_stack(namespace.get_namespace()[condition.left.name]), stack_flag=True)
@@ -284,7 +284,7 @@ class Assembler:
             raise Exception("Unhandled if statement condition")
         
         if isinstance(condition.right, Literal):
-            self.add_instruction(Instruction.LDB, condition.right.value)
+            self.add_instruction(Instruction.LDB, int(condition.right.value))
         elif isinstance(condition.right, Variable):
             self.add_instruction(Instruction.LDB, self.memory.id_on_stack(namespace.get_namespace()[condition.right.name]), stack_flag=True)
         elif isinstance(condition.right, Call):
@@ -356,9 +356,9 @@ class Assembler:
     def parse_let(self, namespace, statement):
         if isinstance(statement.initial, Literal):
             identifier = namespace.let(statement.name.lexeme, 1, statement.vtype.lexeme, False)
-            value = statement.initial.value
+            value = int(statement.initial.value)
             self.add_instruction(Instruction.PUSH, 1)
-            self.add_instruction(Instruction.LDA, int(value)) # LDA value
+            self.add_instruction(Instruction.LDA, value) # LDA value
             self.add_instruction(Instruction.STA, self.memory.id_on_stack(identifier), stack_flag=True) # STA var_name
         elif isinstance(statement.initial, Call):
             self.parse_call(namespace, statement.initial.callee, statement.initial.args)
@@ -367,6 +367,24 @@ class Assembler:
             self.add_instruction(Instruction.PUSH, 1)
             self.add_instruction(Instruction.STA, self.memory.id_on_stack(identifier), stack_flag=True) # STA func_return
         elif isinstance(statement.initial, Binary):
+            # increment in place if variable and +1
+            if isinstance(statement.initial.left, Variable):
+                if isinstance(statement.initial.right, Literal):
+                    if statement.initial.right.value == 1:
+                        if statement.initial.operator.token_type == TokenType.PLUS:
+                            self.add_instruction(Instruction.LDA, self.memory.id_on_stack(namespace.get_namespace()[statement.initial.left.name]), stack_flag=True)
+                            identifier = namespace.let(statement.name.lexeme, 1, statement.vtype.lexeme, False)
+                            self.add_instruction(Instruction.PUSH, 1)
+                            self.add_instruction(Instruction.STA, self.memory.id_on_stack(namespace.get_namespace()[statement.name]), stack_flag=True)
+                            self.add_instruction(Instruction.INC, self.memory.id_on_stack(namespace.get_namespace()[statement.name]), stack_flag=True)
+                            return
+                        elif statement.initial.operator.token_type == TokenType.MINUS:
+                            self.add_instruction(Instruction.LDA, self.memory.id_on_stack(namespace.get_namespace()[statement.initial.left.name]), stack_flag=True)
+                            identifier = namespace.let(statement.name.lexeme, 1, statement.vtype.lexeme, False)
+                            self.add_instruction(Instruction.PUSH, 1)
+                            self.add_instruction(Instruction.STA, self.memory.id_on_stack(namespace.get_namespace()[statement.name.lexeme]), stack_flag=True)
+                            self.add_instruction(Instruction.DEC, self.memory.id_on_stack(namespace.get_namespace()[statement.name.lexeme]), stack_flag=True)
+                            return
             self.parse_binary(namespace, statement.initial)
             identifier = namespace.let(statement.name.lexeme, 1, statement.vtype.lexeme, False)
             self.add_instruction(Instruction.PUSH, 1)
@@ -398,7 +416,7 @@ class Assembler:
         if not statement.name in namespace.get_namespace():
             raise Exception(f"Assignment to uninitialised variable {statement.name}. Use 'let type name = value;' to initialise.")
         if isinstance(statement.value, Literal):
-            value = statement.value.value
+            value = int(statement.value.value)
             self.add_instruction(Instruction.LDA, value) # LDA value
             self.add_instruction(Instruction.STA, self.memory.id_on_stack(namespace.get_namespace()[statement.name]), stack_flag=True, mem_flag=True) # STA [var_name]
         elif isinstance(statement.value, Binary):
@@ -408,9 +426,25 @@ class Assembler:
                     if isinstance(statement.value.right, Literal):
                         if statement.value.right.value == 1:
                             if statement.value.operator.token_type == TokenType.PLUS:
-                                self.add_instruction(Instruction.OFF, 0)
                                 self.add_instruction(Instruction.INC, self.memory.id_on_stack(namespace.get_namespace()[statement.value.left.name]), stack_flag=True)
                                 return
+                            elif statement.value.operator.token_type == TokenType.MINUS:
+                                self.add_instruction(Instruction.DEC, self.memory.id_on_stack(namespace.get_namespace()[statement.value.left.name]), stack_flag=True)
+                                return
+                else:
+                    if isinstance(statement.value.right, Literal):
+                        if statement.value.right.value == 1:
+                            if statement.value.operator.token_type == TokenType.PLUS:
+                                self.add_instruction(Instruction.LDA, self.memory.id_on_stack(namespace.get_namespace()[statement.value.left.name]), stack_flag=True)
+                                self.add_instruction(Instruction.STA, self.memory.id_on_stack(namespace.get_namespace()[statement.name]), stack_flag=True)
+                                self.add_instruction(Instruction.INC, self.memory.id_on_stack(namespace.get_namespace()[statement.name]), stack_flag=True)
+                                return
+                            elif statement.value.operator.token_type == TokenType.MINUS:
+                                self.add_instruction(Instruction.LDA, self.memory.id_on_stack(namespace.get_namespace()[statement.value.left.name]), stack_flag=True)
+                                self.add_instruction(Instruction.STA, self.memory.id_on_stack(namespace.get_namespace()[statement.name]), stack_flag=True)
+                                self.add_instruction(Instruction.DEC, self.memory.id_on_stack(namespace.get_namespace()[statement.name]), stack_flag=True)
+                                return
+            
             self.parse_binary(namespace, statement.value)
             self.add_instruction(Instruction.STA, self.memory.id_on_stack(namespace.get_namespace()[statement.name]), stack_flag=True, mem_flag=True) # STA [var_name]
         elif isinstance(statement.value, Variable):
@@ -441,7 +475,7 @@ class Assembler:
         
     def parse_assign_index(self, namespace, statement):
         if isinstance(statement.right, Literal):
-            self.add_instruction(Instruction.LDA, statement.right.value)
+            self.add_instruction(Instruction.LDA, int(statement.right.value))
         elif isinstance(statement.right, Variable):
             self.add_instruction(Instruction.LDA, self.memory.id_on_stack(namespace.get_namespace()[statement.right.name]), stack_flag=True)
         elif isinstance(statement.right, Index):
@@ -552,7 +586,7 @@ class Assembler:
                 elif statement.callee.name == "__internal_print_char":
                     for arg in statement.args:
                         if isinstance(arg, Literal):
-                            self.add_instruction(Instruction.PRC, arg.value)
+                            self.add_instruction(Instruction.PRC, int(arg.value))
                         else:
                             if not arg.name in namespace.get_namespace():
                                 raise Exception(f"Call with uninitialised variable {arg.name}")
