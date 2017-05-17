@@ -119,7 +119,8 @@ def INC(emulator, mem_flag, stack_flag, data):
 def DEC(emulator, mem_flag, stack_flag, data):
     if stack_flag:
         emulator.memory[emulator.stack[-data]+emulator.reg_offset.value] -= 1
-    emulator.memory[data] -= 1
+    else:
+        emulator.memory[data] -= 1
     
 @debug_addr
 def MOV(emulator, mem_flag, stack_flag, data):
