@@ -12,7 +12,7 @@ def compile(source, debug=False, filename="main.hatch"):
     tokenizer = Tokenizer(source, filename)
     tokens = tokenizer.tokenize()
     
-    ast = ASTParser(tokens, source, filename, compiler=[compile, compile_file])
+    ast = ASTParser(tokens, compiler=[compile, compile_file])
     tree, error = ast.parse()
     
     if error:

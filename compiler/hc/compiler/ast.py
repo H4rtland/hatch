@@ -8,22 +8,17 @@ from compiler.expressions import *
 from compiler.types import Types, TypeManager
 
 class ASTParser:
-    def __init__(self, tokens, source, filename, compiler):
-        print(tokens)
+    def __init__(self, tokens, compiler):
         self.tokens = tokens
-        self.sourcelines = source.split("\n")
         self.position = 0
         self.statements = []
         self.had_error = False
-        self.filename = filename
         self.compile, self.compile_file = compiler
         
     def print_error(self, token, message):
-        source_line = self.sourcelines[token.line-1]
-        indentsize = len(source_line) - len(source_line.lstrip())
-        source_line = source_line.lstrip()
+        source_line = token.source_line
         print(source_line, file=sys.stderr)
-        print(" "*(token.char-indentsize) + "^", file=sys.stderr)
+        print(" "*(token.char) + "^", file=sys.stderr)
         print(message, file=sys.stderr)
         print("", file=sys.stderr)
         self.had_error = True
@@ -46,12 +41,7 @@ class ASTParser:
             token, line_num = self.tokens[self.position-1], self.tokens[self.position-1].line
         else:
             token, line_num = self.tokens[self.position], self.tokens[self.position].line
-        
-        self.print_error(token, f"{error_message} on line {line_num} in file {self.filename}")
-        
-        #self.position += 1
-        #sys.exit(0)
-        #raise Exception(f"{error_message} on line {self.tokens[self.position].line}")
+        self.print_error(token, f"{error_message} on line {token.line} in file {token.source_file}")
     
     def previous(self):
         return self.tokens[self.position-1]
@@ -337,7 +327,6 @@ class ASTParser:
         initial = self.expression()
         if vtype.lexeme == "string":
             is_array = True
-            print(initial)
             array_length = Literal(len(initial.elements), Types.INT)
             
         if not no_semicolon:

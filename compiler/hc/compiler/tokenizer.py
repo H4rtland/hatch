@@ -57,6 +57,8 @@ class Token:
         self.source_line = Token.current_sourcelines[self.line-1].lstrip()
         self.source_file = Token.current_sourcefile
         self.source_line_num = self.line
+        indentsize = len(Token.current_sourcelines[self.line-1]) - len(self.source_line)
+        self.char -= indentsize
     
     def __repr__(self):
         return f"<Token: {self.token_type}, {self.lexeme}, {self.literal} (line {self.line})>"
@@ -149,22 +151,14 @@ class Tokenizer:
                     self.next()
                 return
             elif self.peek_for("*"):
-                #opened = 1
                 while not self.at_end():
-                    self.next()
-                    #if self.peek(1) == "/" and self.peek(2) == "*":
-                    #    opened += 1
                     if self.peek(1) == "\n":
                         self.line += 1
                     if self.peek(1) == "*" and self.peek(2) == "/":
-                        #opened -= 1
                         self.next()
                         self.next()
                         break
-                    #if opened == 0:
-                    #    self.next()
-                    #    self.next()
-                    #    break
+                    self.next()
                 return
             else:
                 return self.add_token(TokenType.SLASH)
