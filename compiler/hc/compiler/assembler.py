@@ -510,6 +510,7 @@ class Assembler:
             TokenType.LESS_EQUAL: Instruction.JG,
             TokenType.GREATER_EQUAL: Instruction.JL,
         }[statement.condition.operator.token_type]
+        
         self.parse_let(namespace, statement.declare)
         comparison_start = len(self.instructions)
         self.parse_comparison(namespace, statement.condition)
@@ -525,8 +526,8 @@ class Assembler:
         end_addr = len(self.instructions)
         self.instructions[compare_data_byte] = end_addr
         
-        self.memory.unstack(len(namespace.locals))
-        self.add_instruction(Instruction.POP, len(namespace.locals))
+        self.add_instruction(Instruction.FREE, 1)
+        self.memory.unstack(1)
         
     def parse_while(self, namespace, statement):
         compare_inst = {

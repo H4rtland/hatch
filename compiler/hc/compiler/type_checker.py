@@ -49,7 +49,7 @@ class TypeChecker:
         for function in self.ast:
             args = [NamespaceVariable(TypeManager.get_type(arg[0].lexeme), arg[3]) for arg in function.args]
             namespace[function.name.lexeme] = NamespaceFunction(TypeManager.get_type(function.rtype.lexeme), args)
-        print(namespace)
+        # print(namespace)
         try:
             for function in self.ast:
                 self.check_branch(function, namespace)
@@ -61,6 +61,10 @@ class TypeChecker:
             # copy namespace so modifications only get passed down, not back up
             self.checking_expression = branch
             expression_checkers[branch.__class__](self, branch, dict(namespace))
+        elif branch is None:
+            # e.g, no else block in If expression
+            # ignore silently
+            pass
         else:
             print(f"TypeChecker: Unchecked branch: {branch.__class__.__name__}")
             

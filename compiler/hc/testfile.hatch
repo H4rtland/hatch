@@ -1,11 +1,15 @@
-import algorithm;
+import io;
 
 function void main() {
-    let int[3] numbers = [7, 5, 2];
-    sort(numbers);
-    let int k = 0;
-    for(let int i=0; i<numbers; i=i+1) {
-        k = numbers[i];
-        __internal_print(k);
+    for(let int i=0; i<250; i=i+1) {
+        print(pow(3, 3));
     }
+}
+
+function int pow(int base, int exponent) {
+    let int value = base;
+    for(let int i=1; i<exponent; i=i+1) {
+        value = value*base;
+    }
+    return value;
 }
