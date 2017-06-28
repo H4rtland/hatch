@@ -13,7 +13,7 @@ function int triangle_number(int n) {
 }
 
 function int main() {
-    print(triangle_number(5));
+    io.print(triangle_number(5));
 }
 """
 

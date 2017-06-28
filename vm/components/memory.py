@@ -1,4 +1,5 @@
 from components.register import Register
+import itertools
 
 class MemoryAccessException(Exception):
     pass
@@ -42,4 +43,5 @@ class Memory:
         self.memory[index] = value
         
     def __repr__(self):
-        return f"<Memory: {self.memory}>"
+        # Print memory up to unused zeroes
+        return f"<Memory: {list(reversed(list(itertools.dropwhile(lambda x: x == 0, reversed(self.memory)))))}>"

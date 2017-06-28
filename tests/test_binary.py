@@ -15,12 +15,12 @@ function void main() {
 
     //print(sum(array[0], array[1]));
 
-    print(1+sum(6, 7));
-    print(sum(6, 7)+1);
+    io.print(1+sum(6, 7));
+    io.print(sum(6, 7)+1);
 
     let int x = 43;
-    print(x+5);
-    print(x-5);
+    io.print(x+5);
+    io.print(x-5);
 }
 """
 

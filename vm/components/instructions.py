@@ -262,7 +262,7 @@ def FREE(emulator, mem_flag, stack_flag, data):
         memory_end = memory_start + length + 1
         for i in range(memory_start, memory_end):
             emulator.memory_map[i] = False
-            emulator.memory[i] = 255
+            emulator.memory[i] = 222 # Mark as freed for debugging purposes
         emulator.stack = emulator.stack[:-1]
     
         

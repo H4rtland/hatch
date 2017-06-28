@@ -11,7 +11,7 @@ function void main() {
     array[4] = 60;
     array[index] = 0;
     for (let int i=0; i<5; i=i+1) {
-        print(array[i]);
+        io.print(array[i]);
     }
 }
 """

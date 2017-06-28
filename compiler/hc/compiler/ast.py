@@ -14,6 +14,7 @@ class ASTParser:
         self.statements = []
         self.had_error = False
         self.compile, self.compile_file = compiler
+        self.sub_trees = {}
         
     def print_error(self, token, message):
         source_line = token.source_line
@@ -66,7 +67,7 @@ class ASTParser:
                 next_expression.source_file = token.source_file
                 next_expression.source_line_num = token.source_line_num
                 self.statements.append(next_expression)
-        return self.statements, self.had_error
+        return self.statements, self.sub_trees, self.had_error
     
     def declaration(self, no_let_semicolon=False):
         if self.match(TokenType.FUNCTION):
@@ -114,7 +115,13 @@ class ASTParser:
                 source = import_file.read()
             tokenizer = Tokenizer(source, filename)
             tokens = tokenizer.tokenize(main=False)
-            self.insert(tokens)
+            ast = ASTParser(tokens, compiler=[self.compile, self.compile_file])
+            tree, sub_trees, error = ast.parse()
+            if error:
+                self.had_error = True
+            else:
+                self.sub_trees[name.lexeme] = (tree, sub_trees)
+            #self.insert(tokens)
         else:
             self.print_error(name, f"Could not find module {name.lexeme}")
             
@@ -151,7 +158,7 @@ class ASTParser:
         
         function_body = self.block()
         return_type = rtype#TypeManager.get_type(rtype.lexeme)
-        return Function(name, return_type, args, function_body)
+        return Function(name, return_type, args, function_body, name.source_file)
     
     def block(self):
         self.consume(TokenType.LEFT_BRACE, "Expected '{' to open block")
@@ -195,6 +202,8 @@ class ASTParser:
                 return Assign(expr.name, value)
             if isinstance(expr, Index):
                 return AssignIndex(expr, value)
+            if isinstance(expr, Access):
+                return AccessAssign(expr, value)
         return expr
     
     def equality(self):
@@ -306,6 +315,14 @@ class ASTParser:
                 index = self.term()
                 self.consume(TokenType.RIGHT_SQUARE, "Expected ']' to close index")
                 return Index(variable, index)
+            if self.check(TokenType.DOT):
+                # access
+                hierarchy = [self.previous().lexeme,]
+                while self.check(TokenType.DOT):
+                    self.consume(TokenType.DOT)
+                    next_name = self.consume(TokenType.IDENTIFIER, "Expected identifier for variable access")
+                    hierarchy.append(next_name.lexeme)
+                return Access(hierarchy)
             return Variable(self.previous().lexeme)
         
         return Literal(1, Types.INT)

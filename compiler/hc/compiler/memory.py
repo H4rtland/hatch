@@ -113,3 +113,95 @@ class Namespace:
     
     def is_array(self, name):
         return self.get_is_arrays()[name]
+
+class NamespaceGroup:
+    def __init__(self, parent, stack):
+        self.parent: NamespaceGroup = parent
+        self.stack: Stack = stack
+        self.locals = {}
+        self.is_arrays = {}
+        
+    def let(self, name, is_array):
+        uid = uuid.uuid4().hex
+        self.locals[name] = uid
+        self.is_arrays[name] = is_array
+        self.stack.add(uid)
+        return uid
+        
+    def add(self, name, value):
+        self.locals[name] = value
+        
+    def get_namespace(self, no_globals=False):
+        if self.parent is None:
+            if no_globals:
+                return {}
+            return dict(self.locals)
+        return {**self.parent.get_namespace(no_globals), **self.locals}
+    
+    def get_is_arrays(self):
+        if self.parent is None:
+            return self.is_arrays
+        return {**self.parent.get_is_arrays(), **self.is_arrays}
+    
+    def is_array(self, name):
+        return self.get_is_arrays()[name]
+    
+    def get(self, *path_name):
+        namespace = self.get_namespace()
+        name, *subnames = path_name
+        if len(subnames) == 0:
+            return namespace[name]
+        if isinstance(namespace[name], NamespaceGroup):
+            return namespace[name].get(*subnames)
+        raise Exception("Path did not exist")
+    
+    def contains(self, *path_name):
+        namespace = self.get_namespace()
+        name, *subnames = path_name
+        if len(subnames) == 0:
+            return name in namespace
+        if isinstance(namespace[name], NamespaceGroup):
+            return namespace[name].contains(*subnames)
+        raise Exception("Path did not exist")
+        
+        
+    
+        
+    
+class Stack:
+    def __init__(self):
+        self.stack = []
+        self.temp_extra_stack_vars = 0
+        
+    def add(self, uid):
+        """
+        Add a unique identifier to the top of the stack
+        :param uid: uid to add
+        :return:
+        """
+        self.stack.append(uid)
+        
+    def id_on_stack(self, uid):
+        """
+        Get position of a uid on the stack.
+        Top item on the stack returns 1, second item on the stack returns 2.
+        :param uid: unique identifier of stack reference
+        :return: stack position
+        """
+        return len(self.stack)-self.stack.index(uid) + self.temp_extra_stack_vars
+
+    def exists(self, uid):
+        """
+        Check if unique identifier exists on the stack
+        :param uid: unique identifier of stack reference
+        :return:
+        """
+        return uid in self.stack
+    
+    def unstack(self, number):
+        """
+        Remove the top n  uids from the top of the stack
+        :param number: uids to remove from the top of the stack
+        :return:
+        """
+        self.stack = self.stack[:-number]

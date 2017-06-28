@@ -1,15 +1,11 @@
 import io;
 
 function void main() {
-    for(let int i=0; i<250; i=i+1) {
-        print(pow(3, 3));
-    }
+    let int x = get_4();
+    io.print(x);
+    io.print(5);
 }
 
-function int pow(int base, int exponent) {
-    let int value = base;
-    for(let int i=1; i<exponent; i=i+1) {
-        value = value*base;
-    }
-    return value;
+function int get_4() {
+    return 4;
 }

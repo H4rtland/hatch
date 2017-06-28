@@ -6,7 +6,7 @@ import io;
 
 function int main() {
     let int x = 5;
-    print(x);
+    io.print(x);
 }
 """
 

@@ -15,11 +15,13 @@ class Block:
         print("    "*indent + "}")
 
 class Function:
-    def __init__(self, name, rtype, args, body):
+    def __init__(self, name, rtype, args, body, filename):
         self.name = name
         self.rtype = rtype
         self.args = args
         self.body = body
+        self.filename = filename
+        # function can be uniquely identified by filename and function name
         
     def resolve_type(self, namespace):
         return TypeManager.get_type(self.rtype.lexeme)
@@ -30,7 +32,8 @@ class Function:
         self.body.print(indent+1)
         
     def __repr__(self):
-        return f"<Function: {self.rtype.lexeme} {self.name.lexeme} ({self.args})>"
+        args = ", ".join([type_.lexeme + " " + name.lexeme for (type_, name, _, _) in self.args])
+        return f"<Function: {self.rtype.lexeme} {self.name.lexeme} ({args})>"
         
 class Expression:
     def __init__(self, expression):
@@ -78,15 +81,15 @@ class Variable:
         self.name = name
         
     def print(self, indent=0):
-        print(self.name)
+        print("    "*indent + self.name)
     
     def __repr__(self):
         return f"<Variable: {self.name}>"
     
     def resolve_type(self, namespace):
-        if self.name not in namespace:
+        if not namespace.contains(self.name):
             raise ExpressionValidationException(f"Use of undefined variable '{self.name}'")
-        return namespace[self.name].type
+        return namespace.get(self.name).type
     
 class Index:
     def __init__(self, variable, index):
@@ -97,9 +100,9 @@ class Index:
         return f"<Index: {self.variable}[{self.index}]>"
     
     def resolve_type(self, namespace):
-        if namespace[self.variable.name].type == Types.STRING:
+        if namespace.get(self.variable.name).type == Types.STRING:
             return Types.CHAR
-        return namespace[self.variable.name].type
+        return namespace.get(self.variable.name).type
         
 class Literal:
     def __init__(self, value, type_):
@@ -142,9 +145,19 @@ class Call:
         return f"<Call: func {self.callee}, args {self.args}>"
     
     def resolve_type(self, namespace):
-        if self.callee.name not in namespace:
-            raise ExpressionValidationException(f"Call to undefined function '{self.callee.name}'")
-        function = namespace[self.callee.name]
+        if isinstance(self.callee, Variable):
+            if not namespace.contains(self.callee.name):
+                raise ExpressionValidationException(f"Call to undefined function '{self.callee.name}'")
+            function = namespace.get(self.callee.name)
+        elif isinstance(self.callee, Access):
+            if not namespace.contains(*self.callee.hierarchy):
+                raise ExpressionValidationException(f"Call to undefined function '{str(self.callee)}'")
+            function = namespace.get(*self.callee.hierarchy)
+        else:
+            # Shouldn't be anything else
+            raise Exception
+        
+        #function = namespace.get(self.callee.name)
         if len(function.args) != len(self.args):
             raise ExpressionValidationException(f"Wrong number of args: expected {len(function.args)}, got {len(self.args)}")
         arg_pairs = zip(function.args, self.args)
@@ -156,7 +169,7 @@ class Call:
                 raise ExpressionValidationException(f"Argument mismatch: arg ({i}) {f.type} != {c.resolve_type(namespace)}")
             value_is_array = isinstance(c, Array)
             if isinstance(c, Variable):
-                value_is_array = value_is_array or namespace[c.name].is_array
+                value_is_array = value_is_array or namespace.get(c.name).is_array
             if f.is_array != value_is_array:
                 raise ExpressionValidationException(f"Argument {i} was {'' if f.is_array else 'not '}expecting an array")
         
@@ -243,3 +256,28 @@ class Array:
         if not len(set([element.resolve_type(namespace) for element in self.elements])) == 1:
             raise ExpressionValidationException("Multiple data types in array")
         return self.elements[0].resolve_type(namespace)
+    
+class Access:
+    def __init__(self, hierarchy):
+        self.hierarchy = hierarchy
+        
+    def resolve_type(self, namespace):
+        #return namespace[self.hierarchy[0]].get(*self.hierarchy[1:]).type
+        return namespace.get(*self.hierarchy).type
+        
+    def __repr__(self):
+        return f"<Access: {'.'.join(self.hierarchy)}>"
+        
+    def print(self, indent=0):
+        print("    "*indent + f"<Access: {'.'.join(self.hierarchy)}>")
+        
+class AccessAssign:
+    def __init__(self, access, value):
+        self.access = access
+        self.value = value
+
+    def __repr__(self):
+        return f"<AccessAssign: {'.'.join(self.access.hierarchy)} = {self.value}>"
+        
+    def print(self, indent=0):
+        print("    "*indent + f"<AccessAssign: {'.'.join(self.access.hierarchy)} = {self.value}>")

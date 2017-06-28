@@ -7,11 +7,11 @@ import io;
 function int main() {
     let int i = 0;
     while (i < 5) {
-        print(i);
+        io.print(i);
         i = i + 1;
     }
     while (i >= 1) {
-        print(i);
+        io.print(i);
         i = i - 1;
     }
 }
