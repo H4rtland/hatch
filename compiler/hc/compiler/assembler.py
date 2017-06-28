@@ -33,6 +33,7 @@ class Assembler:
         self.function_names = []
         self.main = None
         self.non_main_functions = {}
+        self.data = {}
         
         for branch in self.ast:
             if isinstance(branch, Function):
@@ -103,7 +104,13 @@ class Assembler:
                 parameter_identifiers.append(namespace.let(arg[1].lexeme, arg[3]))
             self.current_module_name = function_name[0]
             self.parse(namespace, function.body, is_function=True, parameter_identifiers=parameter_identifiers)
-            
+        
+        data_start = len(self.instructions)
+        data_addresses = {}
+        for uid, data in self.data.items():
+            address = len(self.instructions)
+            data_addresses[uid] = address
+            self.instructions += data
             
         for index, instruction in enumerate(list(self.instructions)):
             if isinstance(instruction, FunctionAddress):
@@ -113,62 +120,10 @@ class Assembler:
                 elif isinstance(instruction.func_name, Access):
                     if tuple(instruction.func_name.hierarchy) in self.function_addresses:
                         self.instructions[index] = self.function_addresses[tuple(instruction.func_name.hierarchy)]
+            elif isinstance(instruction, DataAddress):
+                self.instructions[index] = data_addresses[instruction.uid] + instruction.offset
         
-        
-        return self.instructions, self.function_addresses
-        """while True:
-            if all(isinstance(inst, int) for inst in self.instructions):
-                # no more functions left to compile
-                break
-            
-            # time.sleep(0.1)
-            names = []
-            functions_remaining = []
-            for instruction in self.instructions:
-                if isinstance(instruction, FunctionAddress):
-                    if isinstance(instruction.func_name, Variable):
-                        if instruction.func_name.name not in names:
-                            functions_remaining.append(instruction)
-                            names.append(instruction.func_name.name)
-                    elif isinstance(instruction.func_name, Access):
-                        if instruction.func_name.hierarchy not in names:
-                            functions_remaining.append(instruction)
-                            names.append(instruction.func_name.hierarchy)
-            for func_address in functions_remaining:
-                for function in self.non_main_functions:
-                    if function.name.lexeme in self.function_return_addresses:
-                        continue
-                    if func_address.func_name.name == function.name.lexeme:
-                        self.function_addresses[function.name.lexeme] = len(self.instructions)
-                        namespace = NamespaceGroup(self.globals, self.stack)
-                        parameter_identifiers = []
-                        for arg in function.args:
-                            parameter_identifiers.append(namespace.let(arg[1].lexeme, 1, arg[0].lexeme, arg[3]))
-                        self.parse(namespace, function.body, is_function=True, parameter_identifiers=parameter_identifiers)
-                        self.function_return_addresses[function.name.lexeme] = len(self.instructions)-1
-                #print(self.function_addresses)
-                for i, inst in enumerate(self.instructions):
-                    if isinstance(inst, FunctionAddress):
-                        if inst.func_name.name == func_address.func_name.name and inst.func_name.name in self.function_addresses:
-                            self.instructions[i] = self.function_addresses[inst.func_name.name]
-        
-        data_start = len(self.instructions)
-        for index, inst in enumerate(self.instructions):
-            if isinstance(inst, DataAddress):
-                if inst.addr + data_start > 255:
-                    raise Exception(f"{inst.addr+data_start}")
-                self.instructions[index] = inst.addr + data_start
-            if isinstance(inst, FunctionAddress):
-                #if self.function_addresses[inst.func_name.name] > 255:
-                #    raise Exception(f"{inst.func_name.name} = {self.function_addresses[inst.func_name.name]}")
-                self.instructions[index] = self.function_addresses[inst.func_name.name]
-        
-        if len(self.instructions) > 255-16:
-            raise Exception(f"Instructions exceeded max memory size: {len(self.instructions)}")
-        if not all([(0 <= x <= 255) for x in self.instructions]):
-            raise Exception("Overflowed value in output instructions")
-        return self.instructions, self.function_addresses"""
-    
+        return self.instructions, self.function_addresses, data_start
     
     def parse_binary(self, namespace, binary):
         if isinstance(binary.left, Literal):
@@ -277,18 +232,50 @@ class Assembler:
         self.add_instruction(Instruction.LDA, length)
         self.add_instruction(Instruction.STA, 1, stack_flag=True)
         
-        for i, element in enumerate(array.elements):
-            if isinstance(element, Literal):
-                self.add_instruction(Instruction.OFF, i+1)
-                self.add_instruction(Instruction.LDA, element.value)
-                self.add_instruction(Instruction.STA, 1, stack_flag=True)
-            elif isinstance(element, Variable):
-                self.add_instruction(Instruction.OFF, 0)
-                self.add_instruction(Instruction.LDA, self.stack.id_on_stack(namespace.get_namespace()[element.name]), stack_flag=True)
-                self.add_instruction(Instruction.OFF, i+1)
-                self.add_instruction(Instruction.STA, 1, stack_flag=True)
+        from_data_bytes = 20 + len(array.elements)
+        manual_load_bytes = 2 + 6*len(array.elements)
+        print(f"From data: {from_data_bytes}, manual load: {manual_load_bytes}")
+        
+        load_from_data = from_data_bytes <= manual_load_bytes
+        
+        if not (all([isinstance(value, int) for value in array.elements]) or all([isinstance(value, Literal) for value in array.elements])):
+            load_from_data = False
+        
+        if not load_from_data:
+            for i, element in enumerate(array.elements, start=1):
+                if isinstance(element, Literal):
+                    self.add_instruction(Instruction.OFF, i)
+                    self.add_instruction(Instruction.LDA, element.value)
+                    self.add_instruction(Instruction.STA, 1, stack_flag=True)
+                elif isinstance(element, Variable):
+                    self.add_instruction(Instruction.OFF, 0)
+                    self.add_instruction(Instruction.LDA, self.stack.id_on_stack(namespace.get_namespace()[element.name]), stack_flag=True)
+                    self.add_instruction(Instruction.OFF, i)
+                    self.add_instruction(Instruction.STA, 1, stack_flag=True)
+                else:
+                    raise Exception("Unhandled array element")
+        else:
+            data = tuple(element.value.value if isinstance(element.value, Literal) else element.value for element in array.elements)
+            if data in self.data.values():
+                uid = dict(zip(self.data.values(), self.data.keys()))[data]
             else:
-                raise Exception("Unhandled array element")
+                uid = uuid.uuid4().hex
+                self.data[uid] = data
+
+            self.add_instruction(Instruction.OFF, 0)
+            comparison_start = len(self.instructions)
+            self.add_instruction(Instruction.MOV, mov(Register.AX, Register.OX))
+            self.add_instruction(Instruction.LDB, len(array.elements))
+            self.add_instruction(Instruction.CMP, 0)
+            self.add_instruction(Instruction.JGE, 0)
+            jump_instruction = len(self.instructions)-1
+            self.add_instruction(Instruction.INC, 255-Register.OX.value)
+            self.add_instruction(Instruction.LDA, DataAddress(uid, offset=-1), mem_flag=True)
+            self.add_instruction(Instruction.STA, 1, stack_flag=True)
+            self.add_instruction(Instruction.JMP, comparison_start)
+            end = len(self.instructions)
+            self.instructions[jump_instruction] = end
+            
         
         self.add_instruction(Instruction.OFF, 0)
         

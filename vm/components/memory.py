@@ -38,7 +38,7 @@ class Memory:
         if isinstance(value, Register):
             value = value.value
         if not 0 <= value <= 255:
-            raise MemoryAccessException(f"Tried to store an out of bounds value in memory ({value.__class__.__name__}: {value})")
+            raise MemoryAccessException(f"Tried to store an out of bounds value in memory address {index} ({value.__class__.__name__}: {value})")
 
         self.memory[index] = value
         

@@ -40,7 +40,7 @@ def LDA(emulator, mem_flag, stack_flag, data):
     if mem_flag and stack_flag:
         emulator.reg_a.load(emulator.stack[-data]+emulator.reg_offset.value)
     elif mem_flag:
-        emulator.reg_a.load(emulator.memory[data])
+        emulator.reg_a.load(emulator.memory[data+emulator.reg_offset.value])
     elif stack_flag:
         emulator.reg_a.load(emulator.memory[emulator.stack[-data]+emulator.reg_offset.value])
     else:
@@ -51,7 +51,7 @@ def LDB(emulator, mem_flag, stack_flag, data):
     if mem_flag and stack_flag:
         emulator.reg_b.load(emulator.stack[-data]+emulator.reg_offset.value)
     elif mem_flag:
-        emulator.reg_b.load(emulator.memory[data])
+        emulator.reg_b.load(emulator.memory[data+emulator.reg_offset.value])
     elif stack_flag:
         emulator.reg_b.load(emulator.memory[emulator.stack[-data]+emulator.reg_offset.value])
     else:

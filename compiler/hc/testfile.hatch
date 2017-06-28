@@ -1,11 +1,10 @@
 import io;
 
 function void main() {
-    let int x = get_4();
-    io.print(x);
-    io.print(5);
-}
-
-function int get_4() {
-    return 4;
+    let string greeting = "Hello, world!";
+    io.print_string(greeting);
+    let int[5] numbers = [20, 21, 22, 23, 24];
+    for (let int i=0; i<numbers; i=i+1) {
+        io.print(numbers[i]);
+    }
 }

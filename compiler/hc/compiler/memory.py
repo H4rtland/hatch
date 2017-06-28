@@ -1,8 +1,9 @@
 import uuid
 
 class DataAddress:
-    def __init__(self, addr):
-        self.addr = addr
+    def __init__(self, uid, offset=0):
+        self.uid = uid
+        self.offset = offset
         
     def __repr__(self):
         return f"<DataAddress: {self.addr}>"
