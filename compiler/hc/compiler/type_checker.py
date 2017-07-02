@@ -46,7 +46,50 @@ class NamespaceGroup:
             if not path[0] in self.group:
                 return False
             return self.group[path[0]].contains(*args[1:])
-    
+
+    def has_matching_function(self, args, parameters):
+        *path, name = args
+        if path:
+            if not path[0] in self.group:
+                return False
+            return self.group[path[0]].has_matching_function(args[1:], parameters)
+        else:
+            if name in self.group:
+                return True
+            for local_name in self.group:
+                if local_name.split("###")[0] == name:
+                    function_param_types = [arg.type for arg in self.group[local_name].args]
+                    if parameters == function_param_types:
+                        return True
+            return False
+
+    def get_matching_function(self, args, parameters):
+        *path, name = args
+        if path:
+            return self.group[path[0]].get_matching_function(args[1:], parameters)
+        else:
+            if name in self.group:
+                return self.group[name]
+            for local_name in self.group:
+                if local_name.split("###")[0] == name:
+                    function_param_types = [arg.type for arg in self.group[local_name].args]
+                    if parameters == function_param_types:
+                        return self.group[local_name]
+
+    def get_matching_function_name(self, args, parameters):
+        *path, name = args
+        if path:
+            return self.group[path[0]].get_matching_function_name(args[1:], parameters)
+        else:
+            if name in self.group:
+                return name
+            for local_name in self.group:
+                if local_name.split("###")[0] == name:
+                    function_param_types = [arg.type for arg in self.group[local_name].args]
+                    if parameters == function_param_types:
+                        return local_name
+
+
     def copy(self):
         return NamespaceGroup(**dict(self.group))
     

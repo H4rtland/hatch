@@ -2,6 +2,7 @@ import sys
 import os
 import os.path as op
 import codecs
+import uuid
 
 from compiler.tokenizer import TokenType, Tokenizer
 from compiler.expressions import *
@@ -96,7 +97,7 @@ class ASTParser:
         return self.expression_statement()
     
     def find_lib(self, filename):
-        locations = [".", "../lib", "../../lib"]
+        locations = [".", "../lib", "../../lib", "./lib"]
         for location in locations:
             if op.exists(location):
                 if op.exists(op.join(location, filename)):
@@ -155,9 +156,14 @@ class ASTParser:
             arg_num += 1
         
         self.consume(TokenType.RIGHT_BRACKET, "Expected ')' after function args")
-        
+
+
         function_body = self.block()
         return_type = rtype#TypeManager.get_type(rtype.lexeme)
+
+        if not name.lexeme == "main":
+            name.lexeme += f"###|{','.join([arg[0].lexeme for arg in args])}|{uuid.uuid4().hex}"
+
         return Function(name, return_type, args, function_body, name.source_file)
     
     def block(self):
@@ -289,9 +295,9 @@ class ASTParser:
         
     def primary(self):
         if self.match(TokenType.TRUE):
-            return Literal(True, Types.BOOL)
+            return Literal(1, Types.BOOL)
         if self.match(TokenType.FALSE):
-            return Literal(False, Types.BOOL)
+            return Literal(0, Types.BOOL)
         
         if self.match(TokenType.STRING, TokenType.NUMBER):
             if self.previous().token_type == TokenType.NUMBER:

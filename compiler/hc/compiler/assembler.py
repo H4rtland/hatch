@@ -617,10 +617,10 @@ class Assembler:
             
             elif isinstance(statement, Call):
                 if isinstance(statement.callee, Access):
-                    if not namespace.contains(*statement.callee.hierarchy):
-                        raise Exception(f"Call to undefined function {statement.callee.hierarchy}")
-                    else:
-                        self.parse_call(namespace, statement.callee, statement.args)
+                    #if not namespace.contains(*statement.callee.hierarchy):
+                    #    raise Exception(f"Call to undefined function {statement.callee.hierarchy}")
+                    #else:
+                    self.parse_call(namespace, statement.callee, statement.args)
                 else:
                         
                     #if not statement.callee.name in namespace.get_namespace():

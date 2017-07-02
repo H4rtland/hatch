@@ -143,20 +143,28 @@ class Call:
     
     def __repr__(self):
         return f"<Call: func {self.callee}, args {self.args}>"
+
+    def get_parameter_types(self, namespace):
+        return [a.resolve_type(namespace) for a in self.args]
     
     def resolve_type(self, namespace):
         if isinstance(self.callee, Variable):
-            if not namespace.contains(self.callee.name):
+            if not namespace.has_matching_function([self.callee.name,], self.get_parameter_types(namespace)):
                 raise ExpressionValidationException(f"Call to undefined function '{self.callee.name}'")
-            function = namespace.get(self.callee.name)
+            function = namespace.get_matching_function([self.callee.name,], self.get_parameter_types(namespace))
         elif isinstance(self.callee, Access):
-            if not namespace.contains(*self.callee.hierarchy):
+            if not namespace.has_matching_function(self.callee.hierarchy, self.get_parameter_types(namespace)):
                 raise ExpressionValidationException(f"Call to undefined function '{str(self.callee)}'")
-            function = namespace.get(*self.callee.hierarchy)
+            function = namespace.get_matching_function(self.callee.hierarchy, self.get_parameter_types(namespace))
         else:
             # Shouldn't be anything else
             raise Exception
-        
+
+        if isinstance(self.callee, Access):
+            self.callee.hierarchy[-1] = namespace.get_matching_function_name(self.callee.hierarchy, self.get_parameter_types(namespace))
+        elif isinstance(self.callee, Variable):
+            self.callee.name = namespace.get_matching_function_name([self.callee.name,], self.get_parameter_types(namespace))
+
         #function = namespace.get(self.callee.name)
         if len(function.args) != len(self.args):
             raise ExpressionValidationException(f"Wrong number of args: expected {len(function.args)}, got {len(self.args)}")

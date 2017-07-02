@@ -117,7 +117,7 @@ class Namespace:
 
 class NamespaceGroup:
     def __init__(self, parent, stack):
-        self.parent: NamespaceGroup = parent
+        self.parent = parent
         self.stack: Stack = stack
         self.locals = {}
         self.is_arrays = {}
@@ -164,6 +164,11 @@ class NamespaceGroup:
         if isinstance(namespace[name], NamespaceGroup):
             return namespace[name].contains(*subnames)
         raise Exception("Path did not exist")
+
+    """def get_matching_function(self, *path_name):
+        namespace = self.get_namespace()
+        name, *subnames = path_name
+        if subnames:"""
         
         
     

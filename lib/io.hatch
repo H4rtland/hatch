@@ -2,11 +2,11 @@ function void print(int n) {
     __internal_print(n);
 }
 
-function void print_char(char n) {
+function void print(char n) {
     __internal_print_char(n);
 }
 
-function void print_string(string data) {
+function void print(string data) {
     let char x = 0c;
     for(let int i=0; i<data; i=i+1) {
         x = data[i];
