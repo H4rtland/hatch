@@ -118,7 +118,7 @@ class Namespace:
 class NamespaceGroup:
     def __init__(self, parent, stack):
         self.parent = parent
-        self.stack: Stack = stack
+        self.stack = stack
         self.locals = {}
         self.is_arrays = {}
         

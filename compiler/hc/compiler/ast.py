@@ -96,25 +96,45 @@ class ASTParser:
         
         return self.expression_statement()
     
-    def find_lib(self, filename):
-        locations = [".", "../lib", "../../lib", "./lib"]
+    def find_lib(self):
+        locations = ["../lib", "../../lib", "./lib"]
         for location in locations:
             if op.exists(location):
-                if op.exists(op.join(location, filename)):
-                    return location
+                return location
+            """    if op.exists(op.join(location, filename)):
+                    return location"""
+
+    def find_module_lib(self, path):
+        lib_location = self.find_lib()
+        path = op.join(lib_location, *path) + ".hatch"
+        if op.exists(path):
+            return path
+
+    def find_module_local(self, path):
+        path = op.join(".", *path) + ".hatch"
+        if op.exists(path):
+            return path
     
     def import_statement(self):
-        name = self.consume(TokenType.IDENTIFIER, "Expected module name")
+        module_path = []
+        while True:
+            name = self.consume(TokenType.IDENTIFIER, "Expected module name")
+            module_path.append(name.lexeme)
+            if not self.check(TokenType.DOT):
+                break
+            self.consume(TokenType.DOT)
         self.consume(TokenType.SEMICOLON, "Expected semicolon following import")
-        
-        filename = name.lexeme + ".hatch"
-        cwd = os.getcwd()
-        os.chdir(self.find_lib(filename))
-        
-        if op.exists(filename):
-            with open(filename, "r") as import_file:
+
+        filepath = self.find_module_local(module_path) or self.find_module_lib(module_path)
+
+        if filepath is None:
+            self.print_error(name, f"Could not find module {'.'.join(module_path)}")
+        else:
+            filepath = op.abspath(filepath)
+
+            with open(filepath, "r") as import_file:
                 source = import_file.read()
-            tokenizer = Tokenizer(source, filename)
+            tokenizer = Tokenizer(source, filepath)
             tokens = tokenizer.tokenize(main=False)
             ast = ASTParser(tokens, compiler=[self.compile, self.compile_file])
             tree, sub_trees, error = ast.parse()
@@ -123,10 +143,9 @@ class ASTParser:
             else:
                 self.sub_trees[name.lexeme] = (tree, sub_trees)
             #self.insert(tokens)
-        else:
-            self.print_error(name, f"Could not find module {name.lexeme}")
+
             
-        os.chdir(cwd)
+            #os.chdir(cwd)
     
     def function(self):
         rtype = self.consume(TokenType.IDENTIFIER, "Expected function return type")
@@ -162,7 +181,7 @@ class ASTParser:
         return_type = rtype#TypeManager.get_type(rtype.lexeme)
 
         if not name.lexeme == "main":
-            name.lexeme += f"###|{','.join([arg[0].lexeme for arg in args])}|{uuid.uuid4().hex}"
+            name.lexeme += f"###|{','.join([arg[0].lexeme + ('[]' if arg[3] else '') for arg in args])}|{name.source_file}"
 
         return Function(name, return_type, args, function_body, name.source_file)
     

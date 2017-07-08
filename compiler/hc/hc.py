@@ -45,6 +45,9 @@ if __name__ == "__main__":
     
     if len(instructions) > 240:
         raise Exception(f"Compiled binary will not fit in memory, size: {len(instructions)} bytes")
+    if not all([isinstance(inst, int) for inst in instructions]):
+        print(instructions)
+        raise Exception("Not all instructions were ints")
     if not all([(0 <= inst <= 255) for inst in instructions]):
         raise Exception("Overflowed value in output instructions")
     

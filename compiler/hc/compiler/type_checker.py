@@ -58,7 +58,7 @@ class NamespaceGroup:
                 return True
             for local_name in self.group:
                 if local_name.split("###")[0] == name:
-                    function_param_types = [arg.type for arg in self.group[local_name].args]
+                    function_param_types = [(arg.type, arg.is_array) for arg in self.group[local_name].args]
                     if parameters == function_param_types:
                         return True
             return False
@@ -72,7 +72,7 @@ class NamespaceGroup:
                 return self.group[name]
             for local_name in self.group:
                 if local_name.split("###")[0] == name:
-                    function_param_types = [arg.type for arg in self.group[local_name].args]
+                    function_param_types = [(arg.type, arg.is_array) for arg in self.group[local_name].args]
                     if parameters == function_param_types:
                         return self.group[local_name]
 
@@ -85,7 +85,7 @@ class NamespaceGroup:
                 return name
             for local_name in self.group:
                 if local_name.split("###")[0] == name:
-                    function_param_types = [arg.type for arg in self.group[local_name].args]
+                    function_param_types = [(arg.type, arg.is_array) for arg in self.group[local_name].args]
                     if parameters == function_param_types:
                         return local_name
 
@@ -124,27 +124,31 @@ class TypeChecker:
         #raise Exception(error)
         
     def check(self):
-        namespace = NamespaceGroup(**internal_functions)
-        for tree_name, (tree, sub_trees) in self.sub_trees.items():
-            module = NamespaceGroup()
-            for declaration in tree:
-                if isinstance(declaration, Function):
-                    args = [NamespaceVariable(TypeManager.get_type(arg[0].lexeme), arg[3]) for arg in declaration.args]
-                    module.set(declaration.name.lexeme, NamespaceFunction(TypeManager.get_type(declaration.rtype.lexeme), args))
-                #elif isinstance(declaration, Let):
-                #    module.set(declaration.name, NamespaceVariable(declaration.vtype.lexeme, declaration.array))
-            namespace.set(tree_name, module)
-        for function in self.tree:
-            args = [NamespaceVariable(TypeManager.get_type(arg[0].lexeme), arg[3]) for arg in function.args]
-            #namespace[function.name.lexeme] = NamespaceFunction(TypeManager.get_type(function.rtype.lexeme), args)
-            namespace.set(function.name.lexeme, NamespaceFunction(TypeManager.get_type(function.rtype.lexeme), args))
-        print(namespace)
-        print()
-        try:
-            for function in self.tree:
-                self.check_branch(function, namespace)
-        except ExpressionValidationException as e:
-            self.print_error(str(e))
+        def checker(t, st):
+            for tree_name, (tree, sub_trees) in st.items():
+                checker(tree, sub_trees)
+            namespace = NamespaceGroup(**internal_functions)
+            for tree_name, (tree, sub_trees) in st.items():
+                module = NamespaceGroup()
+                for declaration in tree:
+                    if isinstance(declaration, Function):
+                        args = [NamespaceVariable(TypeManager.get_type(arg[0].lexeme), arg[3]) for arg in declaration.args]
+                        module.set(declaration.name.lexeme, NamespaceFunction(TypeManager.get_type(declaration.rtype.lexeme), args))
+                    #elif isinstance(declaration, Let):
+                    #    module.set(declaration.name, NamespaceVariable(declaration.vtype.lexeme, declaration.array))
+                namespace.set(tree_name, module)
+            for function in t:
+                args = [NamespaceVariable(TypeManager.get_type(arg[0].lexeme), arg[3]) for arg in function.args]
+                #namespace[function.name.lexeme] = NamespaceFunction(TypeManager.get_type(function.rtype.lexeme), args)
+                namespace.set(function.name.lexeme, NamespaceFunction(TypeManager.get_type(function.rtype.lexeme), args))
+
+            try:
+                for function in t:
+                    self.check_branch(function, namespace)
+            except ExpressionValidationException as e:
+                self.print_error(str(e))
+
+        checker(self.tree, self.sub_trees)
             
     def check_branch(self, branch, namespace):
         if branch.__class__ in expression_checkers:

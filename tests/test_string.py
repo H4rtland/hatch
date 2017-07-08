@@ -20,4 +20,4 @@ def test_string():
     virtual_machine = vm.OctoEngine(True)
     virtual_machine.load(instructions)
     output = virtual_machine.run()
-    assert output == list("Hello!\ne\nWorld\nH")
+    assert output == list("Hello!e\nWorldH")

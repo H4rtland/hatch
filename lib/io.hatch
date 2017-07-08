@@ -1,5 +1,6 @@
 function void print(int n) {
     __internal_print(n);
+    __internal_print_char(10c);
 }
 
 function void print(char n) {
@@ -14,3 +15,14 @@ function void print(string data) {
     }
     __internal_print_char(10c); // newline
 }
+
+/*function void print(int[] data) {
+    let int x = 0;
+    for(let int i=0; i<data; i=i+1) {
+        x = data[i];
+        __internal_print(x);
+        __internal_print_char(44c);
+        __internal_print_char(32c);
+    }
+    __internal_print_char(10c);
+}*/

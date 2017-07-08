@@ -84,7 +84,7 @@ def PRX(emulator, mem_flag, stack_flag, data):
         to_print = data
     #print(str(bytes([to_print,]), "utf8"))
     if not emulator.redirect_output:
-        print(to_print)
+        print(to_print, end="")
     emulator.output.append(to_print)
 
 @debug_addr
@@ -242,7 +242,8 @@ def PRC(emulator, mem_flag, stack_flag, data):
         to_print = str(bytes([data,]), "utf8")
         if not emulator.redirect_output:
             print(to_print, end="")
-        emulator.output.append(to_print)
+        if not to_print == "\n":
+            emulator.output.append(to_print)
         
 @debug
 def DUP(emulator, mem_flag, stack_flag, data):

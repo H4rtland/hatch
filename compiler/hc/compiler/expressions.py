@@ -1,10 +1,39 @@
+import time
+
+import sys
+
 from compiler.tokenizer import TokenType
 from compiler.types import TypeManager, Types
+
+class FunctionCounter:
+    times_function_called = {}
+    current_name = "main"
+    @staticmethod
+    def call_function(name):
+        #if not FunctionCounter.current_name in FunctionCounter.times_function_called:
+        #    return
+        if name in FunctionCounter.times_function_called:
+            FunctionCounter.times_function_called[name] += 1
+        else:
+            FunctionCounter.times_function_called[name] = 1
+
+    @staticmethod
+    def get_times_called(name):
+        if name in FunctionCounter.times_function_called:
+            return FunctionCounter.times_function_called[name]
+        return 0
 
 class ExpressionValidationException(Exception):
     pass
 
-class Block:
+class Expression:
+    def resolve_type(self, namespace):
+        raise ExpressionValidationException("Resolving type on unimplemented expression")
+
+    def resolve_array(self, namespace):
+        return False
+
+class Block(Expression):
     def __init__(self, statements):
         self.statements = statements
     
@@ -14,7 +43,7 @@ class Block:
             statement.print(indent+1)
         print("    "*indent + "}")
 
-class Function:
+class Function(Expression):
     def __init__(self, name, rtype, args, body, filename):
         self.name = name
         self.rtype = rtype
@@ -35,11 +64,11 @@ class Function:
         args = ", ".join([type_.lexeme + " " + name.lexeme for (type_, name, _, _) in self.args])
         return f"<Function: {self.rtype.lexeme} {self.name.lexeme} ({args})>"
         
-class Expression:
-    def __init__(self, expression):
-        self.expression = expression
+#class Expression:
+#    def __init__(self, expression):
+#        self.expression = expression
         
-class Assign:
+class Assign(Expression):
     def __init__(self, name, value):
         self.name = name
         self.value = value
@@ -50,7 +79,7 @@ class Assign:
     def __repr__(self):
         return f"<Assign: {self.name} = {self.value}>"
     
-class AssignIndex:
+class AssignIndex(Expression):
     def __init__(self, left, right):
         self.left = left
         self.right = right
@@ -62,7 +91,7 @@ class AssignIndex:
         print("    "*indent + f"<AssignIndex: {self.left.variable.name}[{self.left.index}] = {self.right}>")
             
         
-class Let:
+class Let(Expression):
     def __init__(self, vtype, name, initial, array, length):
         self.vtype = vtype
         self.name = name
@@ -76,7 +105,7 @@ class Let:
     def __repr__(self):
         return f"<Let: {self.vtype.lexeme} {self.name.lexeme} = {self.initial}>"
         
-class Variable:
+class Variable(Expression):
     def __init__(self, name):
         self.name = name
         
@@ -90,8 +119,11 @@ class Variable:
         if not namespace.contains(self.name):
             raise ExpressionValidationException(f"Use of undefined variable '{self.name}'")
         return namespace.get(self.name).type
+
+    def resolve_array(self, namespace):
+        return namespace.get(self.name).is_array
     
-class Index:
+class Index(Expression):
     def __init__(self, variable, index):
         self.variable = variable
         self.index = index
@@ -104,7 +136,7 @@ class Index:
             return Types.CHAR
         return namespace.get(self.variable.name).type
         
-class Literal:
+class Literal(Expression):
     def __init__(self, value, type_):
         self.value = value
         self.type = type_
@@ -118,7 +150,7 @@ class Literal:
     def print(self, indent=0):
         print("    "*indent + f"<Literal {self.value}, {self.type}>")
 
-class If:
+class If(Expression):
     def __init__(self, condition, then, otherwise):
         self.condition = condition
         self.then = then
@@ -132,7 +164,7 @@ class If:
             self.otherwise.print(indent+1)
 
 
-class Call:
+class Call(Expression):
     def __init__(self, callee, paren, args):
         self.callee = callee
         self.paren = paren
@@ -145,27 +177,39 @@ class Call:
         return f"<Call: func {self.callee}, args {self.args}>"
 
     def get_parameter_types(self, namespace):
-        return [a.resolve_type(namespace) for a in self.args]
+        types = [a.resolve_type(namespace) for a in self.args]
+        arrays = [a.resolve_array(namespace) for a in self.args]
+        return list(zip(types, arrays))
+
+    def format_parameter_types(self, namespace):
+        types = []
+        for t, a in self.get_parameter_types(namespace):
+            types.append(t.name + "[]" if a else "")
+        return ", ".join(types)
+
     
     def resolve_type(self, namespace):
         if isinstance(self.callee, Variable):
             if not namespace.has_matching_function([self.callee.name,], self.get_parameter_types(namespace)):
-                raise ExpressionValidationException(f"Call to undefined function '{self.callee.name}'")
+                raise ExpressionValidationException(f"Call to undefined function {self.callee.name}({self.format_parameter_types(namespace)})")
             function = namespace.get_matching_function([self.callee.name,], self.get_parameter_types(namespace))
         elif isinstance(self.callee, Access):
             if not namespace.has_matching_function(self.callee.hierarchy, self.get_parameter_types(namespace)):
-                raise ExpressionValidationException(f"Call to undefined function '{str(self.callee)}'")
+                raise ExpressionValidationException(f"Call to undefined function {self.callee.joined_name()}({self.format_parameter_types(namespace)})")
             function = namespace.get_matching_function(self.callee.hierarchy, self.get_parameter_types(namespace))
         else:
             # Shouldn't be anything else
             raise Exception
 
         if isinstance(self.callee, Access):
-            self.callee.hierarchy[-1] = namespace.get_matching_function_name(self.callee.hierarchy, self.get_parameter_types(namespace))
+            func_name = namespace.get_matching_function_name(self.callee.hierarchy, self.get_parameter_types(namespace))
+            self.callee.hierarchy[-1] = func_name
         elif isinstance(self.callee, Variable):
-            self.callee.name = namespace.get_matching_function_name([self.callee.name,], self.get_parameter_types(namespace))
+            func_name = namespace.get_matching_function_name([self.callee.name,], self.get_parameter_types(namespace))
+            self.callee.name = func_name
 
-        #function = namespace.get(self.callee.name)
+        FunctionCounter.call_function(func_name)
+
         if len(function.args) != len(self.args):
             raise ExpressionValidationException(f"Wrong number of args: expected {len(function.args)}, got {len(self.args)}")
         arg_pairs = zip(function.args, self.args)
@@ -183,7 +227,7 @@ class Call:
         
         return function.return_type
     
-class Return:
+class Return(Expression):
     def __init__(self, value):
         self.value = value
         
@@ -193,7 +237,7 @@ class Return:
     def print(self, indent=0):
         print("    "*indent + f"<Return: {self.value}>")
         
-class Binary:
+class Binary(Expression):
     def __init__(self, left, operator, right):
         self.left = left
         self.operator = operator
@@ -218,7 +262,7 @@ class Binary:
     def print(self, indent=0):
         print("    "*indent + str(self))
     
-class Unary:
+class Unary(Expression):
     def __init__(self, operator, right):
         self.operator = operator
         self.right = right
@@ -226,7 +270,7 @@ class Unary:
     def __repr__(self):
         return f"<Unary: {self.operator.lexeme} {self.right}>"
     
-class For:
+class For(Expression):
     def __init__(self, declare, condition, action, block):
         self.declare = declare
         self.condition = condition
@@ -239,7 +283,7 @@ class For:
             statement.print(indent+1)
         print("    "*indent + "}")
         
-class While:
+class While(Expression):
     def __init__(self, condition, block):
         self.condition = condition
         self.block = block
@@ -250,7 +294,7 @@ class While:
             statement.print(indent+1)
         print("    "*indent + "}")
         
-class Array:
+class Array(Expression):
     def __init__(self, elements, is_string=False):
         self.elements = elements
         self.is_string = is_string
@@ -264,8 +308,11 @@ class Array:
         if not len(set([element.resolve_type(namespace) for element in self.elements])) == 1:
             raise ExpressionValidationException("Multiple data types in array")
         return self.elements[0].resolve_type(namespace)
+
+    def resolve_array(self, namespace):
+        return True
     
-class Access:
+class Access(Expression):
     def __init__(self, hierarchy):
         self.hierarchy = hierarchy
         
@@ -275,11 +322,14 @@ class Access:
         
     def __repr__(self):
         return f"<Access: {'.'.join(self.hierarchy)}>"
+
+    def joined_name(self):
+        return ".".join(self.hierarchy)
         
     def print(self, indent=0):
         print("    "*indent + f"<Access: {'.'.join(self.hierarchy)}>")
         
-class AccessAssign:
+class AccessAssign(Expression):
     def __init__(self, access, value):
         self.access = access
         self.value = value

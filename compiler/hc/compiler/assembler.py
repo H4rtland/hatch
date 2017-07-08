@@ -10,7 +10,6 @@ from compiler.instructions import Instruction, Register, mov
 import uuid
 
 SAVED_REGISTERS = 2
-
         
             
 class Assembler:
@@ -52,9 +51,12 @@ class Assembler:
             self.globals.add(module_name, module)
             for module_name, (functions, sub_trees) in sub_trees.items():
                 parse_module(module_name, functions, sub_trees)
+
+
         
         for module_name, (functions, sub_trees) in self.sub_trees.items():
             parse_module(module_name, functions, sub_trees)
+
             
         
         if self.main is None:
@@ -90,10 +92,34 @@ class Assembler:
     def assemble(self):
         self.parse(NamespaceGroup(self.globals, self.stack), self.main.body)
         self.add_instruction(Instruction.HLT, 0) # HLT
-        
-        for function_name, function in self.non_main_functions.items():
+
+        functions = self.non_main_functions.items()
+        """while len(functions) > 0:
+            functions = sorted(functions, key=lambda x: FunctionCounter.get_times_called(x[1].name.lexeme))
+            function_name, function = functions.pop(0)
+            print(function_name, function.name.lexeme, FunctionCounter.get_times_called(function.name.lexeme))
+            if FunctionCounter.get_times_called(function.name.lexeme) == 0:
+                break
             location = len(self.instructions)
             self.function_addresses[function_name] = location
+            self.stack = Stack()
+            self.globals = NamespaceGroup(None, self.stack)
+            self.globals.add("__internal_print", 0)
+            self.globals.add("__internal_print_char", 0)
+            namespace = NamespaceGroup(self.globals, self.stack)
+            parameter_identifiers = []
+            for arg in function.args:
+                parameter_identifiers.append(namespace.let(arg[1].lexeme, arg[3]))
+            self.current_module_name = function_name[0]
+            self.parse(namespace, function.body, is_function=True, parameter_identifiers=parameter_identifiers)"""
+
+
+        for function_name, function in self.non_main_functions.items():
+            location = len(self.instructions)
+            if isinstance(function_name, str):
+                self.function_addresses[function_name] = location
+            elif isinstance(function_name, tuple):
+                self.function_addresses[function_name[-1]] = location
             self.stack = Stack()
             self.globals = NamespaceGroup(None, self.stack)
             self.globals.add("__internal_print", 0)
@@ -117,9 +143,18 @@ class Assembler:
                 if isinstance(instruction.func_name, Variable):
                     if instruction.func_name.name in self.function_addresses:
                         self.instructions[index] = self.function_addresses[instruction.func_name.name]
+                    else:
+                        print(self.function_addresses)
+                        time.sleep(0.05)
+                        raise Exception("Couldn't find function address for", tuple(instruction.func_name.name))
                 elif isinstance(instruction.func_name, Access):
-                    if tuple(instruction.func_name.hierarchy) in self.function_addresses:
-                        self.instructions[index] = self.function_addresses[tuple(instruction.func_name.hierarchy)]
+                    #print("Looking up in address book", tuple(instruction.func_name.hierarchy))
+                    if instruction.func_name.hierarchy[-1] in self.function_addresses:
+                        self.instructions[index] = self.function_addresses[instruction.func_name.hierarchy[-1]]
+                    else:
+                        print(self.function_addresses)
+                        time.sleep(0.05)
+                        raise Exception("Couldn't find function address for", tuple(instruction.func_name.hierarchy))
             elif isinstance(instruction, DataAddress):
                 self.instructions[index] = data_addresses[instruction.uid] + instruction.offset
         
@@ -200,20 +235,20 @@ class Assembler:
                 self.add_instruction(Instruction.PUSH, 1)
                 self.add_instruction(Instruction.STA, 1, stack_flag=True)
             elif isinstance(arg, Array):
-                self.load_array(namespace, arg)
+                self.load_array(namespace, arg, temporary=True)
                 
             else:
                 raise Exception("Unhandled function argument")
             extra_stack_vars += 1
             self.stack.temp_extra_stack_vars += 1
         
-        if isinstance(func, int):
-            stack_value = func + self.stack.temp_extra_stack_vars - 1
-            self.add_instruction(Instruction.CALL, stack_value, stack_flag=True)
-        elif isinstance(func, FunctionAddress):
-            #print("CALL", func)
-            self.add_instruction(Instruction.CALL, func)
-        elif isinstance(func, Variable):
+        #if isinstance(func, int):
+        #    stack_value = func + self.stack.temp_extra_stack_vars - 1
+        #    self.add_instruction(Instruction.CALL, stack_value, stack_flag=True)
+        #elif isinstance(func, FunctionAddress):
+        #    #print("CALL", func)
+        #    self.add_instruction(Instruction.CALL, func)
+        if isinstance(func, Variable):
             #print("CALL2", func)
             if namespace.contains(func.name) and self.stack.exists(namespace.get_namespace()[func.name]):
                 self.add_instruction(Instruction.CALL, self.stack.id_on_stack(namespace.get_namespace()[func.name]), stack_flag=True) # CALL function_start
@@ -226,11 +261,13 @@ class Assembler:
         
         self.stack.temp_extra_stack_vars -= extra_stack_vars
         
-    def load_array(self, namespace, array, force_length=None):
+    def load_array(self, namespace, array, force_length=None, temporary=False):
         length = force_length or len(array.elements)
         self.add_instruction(Instruction.PUSH, length+1)
         self.add_instruction(Instruction.LDA, length)
         self.add_instruction(Instruction.STA, 1, stack_flag=True)
+        if temporary:
+            self.stack.temp_extra_stack_vars += 1
         
         from_data_bytes = 20 + len(array.elements)
         manual_load_bytes = 2 + 6*len(array.elements)
@@ -278,6 +315,8 @@ class Assembler:
             
         
         self.add_instruction(Instruction.OFF, 0)
+        if temporary:
+            self.stack.temp_extra_stack_vars -= 1
         
     def parse_index(self, namespace, variable, index, register=Register.AX):
         if isinstance(index, Literal):

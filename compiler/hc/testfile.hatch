@@ -1,29 +1,19 @@
 import io;
+import abc;
+import swift.bucket;
+import math.trig;
 
-function int get_4(int add) {
+/*function int get_4(int add) {
     return 4 + add;
-}
-
-function int get_4(bool add_one) {
-    if (add_one) {
-        return 5;
-    }
-    return 4;
 }
 
 function int sum(int a, int b) {
     return a + b;
-}
-
-function int sum(int a, bool add_one) {
-    return a + 1;
-}
+}*/
 
 function void main() {
-    let int six = get_4(2);
-    let int five = get_4(true);
-    io.print(six);
-    io.print(five);
-    io.print(sum(1, 3));
-    io.print(sum(2, true));
+    abc.cba(3);
+    io.print(2);
+    io.print(bucket.get_bucket());
+    io.print(trig.sin(10));
 }
