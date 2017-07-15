@@ -10,11 +10,12 @@ from compiler.expressions import *
 expression_checkers = {}
 
 class checker_for:
-    def __init__(self, expression):
-        self.expression = expression
+    def __init__(self, *expressions):
+        self.expressions = expressions
     
     def __call__(self, f):
-        expression_checkers[self.expression] = f
+        for expression in self.expressions:
+            expression_checkers[expression] = f
         return f
     
 NamespaceFunction = namedtuple("NamespaceFunction", ["return_type", "args"])
@@ -25,7 +26,7 @@ class NamespaceGroup:
         self.group = group
         
     def get(self, name, *subnames):
-        if isinstance(self.group[name], NamespaceGroup):
+        if isinstance(self.group[name], NamespaceGroup) and len(subnames) > 0:
             return self.group[name].get(*subnames)
         return self.group[name]
     
@@ -102,18 +103,20 @@ internal_functions = {
     "__internal_print_char":NamespaceFunction(Types.VOID, [NamespaceVariable(Types.CHAR, False)]),
 }
 
+CallFromTo = namedtuple("CallFromTo", ["from_func", "to_func"])
 
 class TypeChecker:
     def __init__(self, source, tree, sub_trees):
         self.source = source.split("\n")
         self.tree = tree
         self.sub_trees = sub_trees
-        self.checking_expression = None
+        self.all_calls = []
         
         # Use this identifier to find current function in return checker.
         # Use a uuid to prevent overlap with any user defined function name
         # like "current_function" which could otherwise be used in the namespace.
         self.current_function_identifier = uuid.uuid4().hex
+        self.current_function_name = None
         
     def print_error(self, error):
         time.sleep(0.01)
@@ -127,34 +130,58 @@ class TypeChecker:
         def checker(t, st):
             for tree_name, (tree, sub_trees) in st.items():
                 checker(tree, sub_trees)
+
             namespace = NamespaceGroup(**internal_functions)
+            type_manager = TypeManager()
             for tree_name, (tree, sub_trees) in st.items():
                 module = NamespaceGroup()
                 for declaration in tree:
                     if isinstance(declaration, Function):
-                        args = [NamespaceVariable(TypeManager.get_type(arg[0].lexeme), arg[3]) for arg in declaration.args]
-                        module.set(declaration.name.lexeme, NamespaceFunction(TypeManager.get_type(declaration.rtype.lexeme), args))
+                        args = [NamespaceVariable(type_manager.get_type(arg.type.lexeme), arg.is_array) for arg in declaration.args]
+                        module.set(declaration.name.lexeme, NamespaceFunction(type_manager.get_type(declaration.rtype.lexeme), args))
                     #elif isinstance(declaration, Let):
                     #    module.set(declaration.name, NamespaceVariable(declaration.vtype.lexeme, declaration.array))
                 namespace.set(tree_name, module)
-            for function in t:
-                args = [NamespaceVariable(TypeManager.get_type(arg[0].lexeme), arg[3]) for arg in function.args]
-                #namespace[function.name.lexeme] = NamespaceFunction(TypeManager.get_type(function.rtype.lexeme), args)
-                namespace.set(function.name.lexeme, NamespaceFunction(TypeManager.get_type(function.rtype.lexeme), args))
+            for branch in t:
+                if isinstance(branch, Struct):
+                    internal_structure = {}
+                    for position, (member_type, name) in enumerate(branch.members, start=1):
+                        internal_structure[name.lexeme] = (position, type_manager.get_type(member_type.lexeme))
+                    struct_type = Type(branch.name.lexeme, len(branch.members), internal_structure=internal_structure)
+                    type_manager.define_type(struct_type)
+                    #struct = NamespaceGroup()
+                    #for member_type, name in branch.members:
+                    #    struct.set(name.lexeme, NamespaceVariable(TypeManager.get_type(member_type.lexeme), False))
+            for branch in t:
+                if isinstance(branch, Function):
+                    args = [NamespaceVariable(type_manager.get_type(arg.type.lexeme), arg.is_array) for arg in branch.args]
+                    #namespace[function.name.lexeme] = NamespaceFunction(TypeManager.get_type(function.rtype.lexeme), args)
+                    namespace.set(branch.name.lexeme, NamespaceFunction(type_manager.get_type(branch.rtype.lexeme), args))
 
             try:
                 for function in t:
-                    self.check_branch(function, namespace)
+                    self.check_branch(function, namespace, type_manager)
             except ExpressionValidationException as e:
                 self.print_error(str(e))
 
+
         checker(self.tree, self.sub_trees)
+
+        included_functions = {"main",}
+        last_size = 0
+        while len(included_functions) > last_size:
+            last_size = len(included_functions)
+            for call in self.all_calls:
+                if call.from_func in included_functions:
+                    included_functions.add(call.to_func)
+
+        return included_functions
             
-    def check_branch(self, branch, namespace):
+    def check_branch(self, branch, namespace, type_manager):
         if branch.__class__ in expression_checkers:
             # copy namespace so modifications only get passed down, not back up
             self.checking_expression = branch
-            expression_checkers[branch.__class__](self, branch, namespace.copy())
+            expression_checkers[branch.__class__](self, branch, namespace.copy(), type_manager)
         elif branch is None:
             # e.g, no else block in If expression
             # ignore silently
@@ -163,75 +190,113 @@ class TypeChecker:
             print(f"TypeChecker: Unchecked branch: {branch.__class__.__name__}")
             
     @checker_for(Function)
-    def check_function(self, function, namespace):
+    def check_function(self, function, namespace, type_manager):
+        self.current_function_name = function.name.lexeme
         namespace.set(self.current_function_identifier, namespace.get(function.name.lexeme))
-        for arg in function.args:
+        for index, arg in enumerate(function.args):
             # namespace[arg[1].lexeme] = Let(arg[0], arg[1].lexeme, 0, False, 0)
             # print(arg)
-            namespace.set(arg[1].lexeme, NamespaceVariable(TypeManager.get_type(arg[0].lexeme), arg[3]))
-        self.check_branch(function.body, namespace)
+            if type_manager.get_type(arg.type.lexeme).has_internal_structure:
+                group = NamespaceGroup()
+                group.type = type_manager.get_type(arg.type.lexeme)
+                group.is_array = False
+                struct_type = type_manager.get_type(arg.type.lexeme)
+                for name, (position, type_) in struct_type.internal_structure.items():
+                    group.set(name, NamespaceVariable(type_, False))
+                group.internal_structure = struct_type.internal_structure
+                namespace.set(arg.name.lexeme, group)
+                function.args[index] = arg._replace(is_struct=True)
+            else:
+                namespace.set(arg.name.lexeme, NamespaceVariable(type_manager.get_type(arg.type.lexeme), arg.is_array))
+        self.check_branch(function.body, namespace, type_manager)
         
     @checker_for(Block)
-    def check_block(self, block, namespace):
+    def check_block(self, block, namespace, type_manager):
         for statement in block.statements:
-            self.check_branch(statement, namespace)
+            self.check_branch(statement, namespace, type_manager)
             if isinstance(statement, Let):
                 # namespace[statement.name.lexeme] = statement
-                namespace.set(statement.name.lexeme, NamespaceVariable(TypeManager.get_type(statement.vtype.lexeme), statement.array))
+                if isinstance(statement.initial, StructCreate):
+                    group = NamespaceGroup()
+                    struct_type = type_manager.get_type(statement.vtype.lexeme)
+                    group.type = struct_type
+                    group.is_array = False
+                    for name, (position, type_) in struct_type.internal_structure.items():
+                        group.set(name, NamespaceVariable(type_, False))
+                    group.internal_structure = struct_type.internal_structure
+                    namespace.set(statement.name.lexeme, group)
+                else:
+                    namespace.set(statement.name.lexeme, NamespaceVariable(type_manager.get_type(statement.vtype.lexeme), statement.array))
             
     @checker_for(If)
-    def check_if(self, if_statement: If, namespace):
-        if not if_statement.condition.resolve_type(namespace) == Types.BOOL:
+    def check_if(self, if_statement: If, namespace, type_manager):
+        if not if_statement.condition.resolve_type(namespace, type_manager) == Types.BOOL:
             self.print_error("If statement did not receive boolean expression")
-        self.check_branch(if_statement.then, namespace)
-        self.check_branch(if_statement.otherwise, namespace)
+        self.check_branch(if_statement.then, namespace, type_manager)
+        self.check_branch(if_statement.otherwise, namespace, type_manager)
 
 
     @checker_for(Return)
-    def check_return(self, return_statement: Return, namespace):
+    def check_return(self, return_statement: Return, namespace, type_manager):
         current_function = namespace.get(self.current_function_identifier)#namespace[self.current_function_identifier]
-        if not return_statement.resolve_type(namespace) == current_function.return_type:
-            self.print_error(f"Return type mismatch: {return_statement.resolve_type(namespace)} != {current_function.return_type}")
+        if not return_statement.resolve_type(namespace, type_manager) == current_function.return_type:
+            print(return_statement)
+            self.print_error(f"Return type mismatch: {return_statement.resolve_type(namespace, type_manager)} != {current_function.return_type}")
+        self.check_branch(return_statement.value, namespace, type_manager)
             
     @checker_for(Let)
-    def check_let(self, let_statement: Let, namespace):
-        if TypeManager.get_type(let_statement.vtype.lexeme) == Types.VOID:
+    def check_let(self, let_statement: Let, namespace, type_manager):
+        if type_manager.get_type(let_statement.vtype.lexeme) == Types.VOID:
             self.print_error("Cannot create a void variable")
-        if not TypeManager.get_type(let_statement.vtype.lexeme) == let_statement.initial.resolve_type(namespace):
+        if not type_manager.get_type(let_statement.vtype.lexeme) == let_statement.initial.resolve_type(namespace, type_manager):
             self.print_error(f"Let statement type mismatch: "
-                             f"{TypeManager.get_type(let_statement.vtype.lexeme)} != {let_statement.initial.resolve_type(namespace)}")
+                             f"{type_manager.get_type(let_statement.vtype.lexeme)} != {let_statement.initial.resolve_type(namespace, type_manager)}")
+        self.check_branch(let_statement.initial, namespace, type_manager)
             
     @checker_for(Call)
-    def check_call(self, call_statement: Call, namespace):
-        call_statement.resolve_type(namespace)
+    def check_call(self, call_statement: Call, namespace, type_manager):
+        call_statement.resolve_type(namespace, type_manager)
+
+        for arg in call_statement.args:
+            self.check_branch(arg, namespace, type_manager)
+
+        calling_to = call_statement.get_calling_to_name(namespace, type_manager)
+        self.all_calls.append(CallFromTo(self.current_function_name, calling_to))
         
     @checker_for(Assign)
-    def check_assign(self, assign_statement: Assign, namespace):
+    def check_assign(self, assign_statement: Assign, namespace, type_manager):
         assigning_to_type = namespace.get(assign_statement.name).type
-        assigned_type = assign_statement.value.resolve_type(namespace)
+        assigned_type = assign_statement.value.resolve_type(namespace, type_manager)
         if not assigning_to_type == assigned_type:
             self.print_error(f"Assignment type mismatch: {assigning_to_type} != {assigned_type}")
+        self.check_branch(assign_statement.value, namespace, type_manager)
             
     @checker_for(For)
-    def check_for(self, for_loop: For, namespace):
-        self.check_branch(for_loop.declare, namespace)
+    def check_for(self, for_loop: For, namespace, type_manager):
+        self.check_branch(for_loop.declare, namespace, type_manager)
         if isinstance(for_loop.declare, Let):
             namespace.set(for_loop.declare.name.lexeme,
-                          NamespaceVariable(TypeManager.get_type(for_loop.declare.vtype.lexeme),
+                          NamespaceVariable(type_manager.get_type(for_loop.declare.vtype.lexeme),
                                             for_loop.declare.array))
-        self.check_branch(for_loop.condition, namespace)
-        if not for_loop.condition.resolve_type(namespace) == Types.BOOL:
+        self.check_branch(for_loop.condition, namespace, type_manager)
+        if not for_loop.condition.resolve_type(namespace, type_manager) == Types.BOOL:
             self.print_error("Expected boolean expression for while loop condition")
-        self.check_branch(for_loop.action, namespace)
-        self.check_branch(for_loop.block, namespace)
+        self.check_branch(for_loop.action, namespace, type_manager)
+        self.check_branch(for_loop.block, namespace, type_manager)
         
     @checker_for(While)
-    def check_while(self, while_loop: While, namespace):
-        self.check_branch(while_loop.condition, namespace)
-        if not while_loop.condition.resolve_type(namespace) == Types.BOOL:
+    def check_while(self, while_loop: While, namespace, type_manager):
+        self.check_branch(while_loop.condition, namespace, type_manager)
+        if not while_loop.condition.resolve_type(namespace, type_manager) == Types.BOOL:
             self.print_error("Expected boolean expression for while loop condition")
-        self.check_branch(while_loop.block, namespace)
+        self.check_branch(while_loop.block, namespace, type_manager)
         
     @checker_for(Binary)
-    def check_binary(self, binary: Binary, namespace):
-        binary.resolve_type(namespace)
+    def check_binary(self, binary: Binary, namespace, type_manager):
+        binary.resolve_type(namespace, type_manager)
+        self.check_branch(binary.left, namespace, type_manager)
+        self.check_branch(binary.right, namespace, type_manager)
+
+    @checker_for(Literal, Variable)
+    def check_pass(self, boring_expression, namespace, type_manager):
+        pass

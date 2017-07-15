@@ -11,11 +11,10 @@ from compiler.instructions import Instruction
 def compile(source, debug=False, filename="main.hatch"):
     tokenizer = Tokenizer(source, filename)
     tokens = tokenizer.tokenize()
-    
-    ast = ASTParser(tokens, compiler=[compile, compile_file])
+
+    ast = ASTParser(tokens, compiler=[compile, compile_file], main_file=filename)
     tree, sub_trees, error = ast.parse()
-    
-    
+
     if error:
         sys.exit()
     
@@ -25,9 +24,9 @@ def compile(source, debug=False, filename="main.hatch"):
         print()
             
     type_checker = TypeChecker(source, tree, sub_trees)
-    type_checker.check()
+    called_function_names = type_checker.check()
         
-    assembler = Assembler(tree, sub_trees)
+    assembler = Assembler(tree, sub_trees, called_function_names)
     instructions, addresses, data_start = assembler.assemble()
     if debug:
         return instructions, addresses, data_start
@@ -44,6 +43,7 @@ if __name__ == "__main__":
     instructions, addresses, data_start = compile_file("testfile.hatch", True)
     
     if len(instructions) > 240:
+        time.sleep(0.05)
         raise Exception(f"Compiled binary will not fit in memory, size: {len(instructions)} bytes")
     if not all([isinstance(inst, int) for inst in instructions]):
         print(instructions)

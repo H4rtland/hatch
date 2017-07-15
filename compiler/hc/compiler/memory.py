@@ -121,11 +121,13 @@ class NamespaceGroup:
         self.stack = stack
         self.locals = {}
         self.is_arrays = {}
+        self.is_structs = {}
         
-    def let(self, name, is_array):
+    def let(self, name, is_array=False, is_struct=False):
         uid = uuid.uuid4().hex
         self.locals[name] = uid
         self.is_arrays[name] = is_array
+        self.is_structs[name] = is_struct
         self.stack.add(uid)
         return uid
         
@@ -143,9 +145,17 @@ class NamespaceGroup:
         if self.parent is None:
             return self.is_arrays
         return {**self.parent.get_is_arrays(), **self.is_arrays}
+
+    def get_is_structs(self):
+        if self.parent is None:
+            return self.is_structs
+        return {**self.parent.get_is_structs(), **self.is_structs}
     
     def is_array(self, name):
         return self.get_is_arrays()[name]
+
+    def is_struct(self, name):
+        return self.get_is_structs()[name]
     
     def get(self, *path_name):
         namespace = self.get_namespace()

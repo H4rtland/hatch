@@ -3,7 +3,7 @@ import time
 import sys
 
 from compiler.tokenizer import TokenType
-from compiler.types import TypeManager, Types
+from compiler.types import TypeManager, Types, Type
 
 class FunctionCounter:
     times_function_called = {}
@@ -27,7 +27,7 @@ class ExpressionValidationException(Exception):
     pass
 
 class Expression:
-    def resolve_type(self, namespace):
+    def resolve_type(self, namespace, type_manager):
         raise ExpressionValidationException("Resolving type on unimplemented expression")
 
     def resolve_array(self, namespace):
@@ -50,18 +50,19 @@ class Function(Expression):
         self.args = args
         self.body = body
         self.filename = filename
+        self.main_function = False
         # function can be uniquely identified by filename and function name
         
-    def resolve_type(self, namespace):
-        return TypeManager.get_type(self.rtype.lexeme)
+    def resolve_type(self, namespace, type_manager):
+        return type_manager.get_type(self.rtype.lexeme)
     
     def print(self, indent=0):
-        args = ", ".join([type_.lexeme + " " + name.lexeme for (type_, name, _, _) in self.args])
+        args = ", ".join([type_.lexeme + " " + name.lexeme for (type_, name, *_) in self.args])
         print("    "*indent + f"<Function: {self.rtype.lexeme} {self.name.lexeme} ({args})>")
         self.body.print(indent+1)
         
     def __repr__(self):
-        args = ", ".join([type_.lexeme + " " + name.lexeme for (type_, name, _, _) in self.args])
+        args = ", ".join([type_.lexeme + " " + name.lexeme for (type_, name, *_) in self.args])
         return f"<Function: {self.rtype.lexeme} {self.name.lexeme} ({args})>"
         
 #class Expression:
@@ -115,7 +116,7 @@ class Variable(Expression):
     def __repr__(self):
         return f"<Variable: {self.name}>"
     
-    def resolve_type(self, namespace):
+    def resolve_type(self, namespace, type_manager):
         if not namespace.contains(self.name):
             raise ExpressionValidationException(f"Use of undefined variable '{self.name}'")
         return namespace.get(self.name).type
@@ -131,7 +132,7 @@ class Index(Expression):
     def __repr__(self):
         return f"<Index: {self.variable}[{self.index}]>"
     
-    def resolve_type(self, namespace):
+    def resolve_type(self, namespace, type_manager):
         if namespace.get(self.variable.name).type == Types.STRING:
             return Types.CHAR
         return namespace.get(self.variable.name).type
@@ -141,7 +142,7 @@ class Literal(Expression):
         self.value = value
         self.type = type_
         
-    def resolve_type(self, namespace):
+    def resolve_type(self, namespace, type_manager):
         return self.type
     
     def __repr__(self):
@@ -176,49 +177,51 @@ class Call(Expression):
     def __repr__(self):
         return f"<Call: func {self.callee}, args {self.args}>"
 
-    def get_parameter_types(self, namespace):
-        types = [a.resolve_type(namespace) for a in self.args]
+    def get_parameter_types(self, namespace, type_manager):
+        types = [a.resolve_type(namespace, type_manager) for a in self.args]
         arrays = [a.resolve_array(namespace) for a in self.args]
         return list(zip(types, arrays))
 
-    def format_parameter_types(self, namespace):
+    def format_parameter_types(self, namespace, type_manager):
         types = []
-        for t, a in self.get_parameter_types(namespace):
+        for t, a in self.get_parameter_types(namespace, type_manager):
             types.append(t.name + "[]" if a else "")
         return ", ".join(types)
 
-    
-    def resolve_type(self, namespace):
+    def get_calling_to(self, namespace, type_manager):
         if isinstance(self.callee, Variable):
-            if not namespace.has_matching_function([self.callee.name,], self.get_parameter_types(namespace)):
-                raise ExpressionValidationException(f"Call to undefined function {self.callee.name}({self.format_parameter_types(namespace)})")
-            function = namespace.get_matching_function([self.callee.name,], self.get_parameter_types(namespace))
+            if not namespace.has_matching_function([self.callee.name,], self.get_parameter_types(namespace, type_manager)):
+                raise ExpressionValidationException(f"Call to undefined function {self.callee.name}({self.format_parameter_types(namespace, type_manager)})")
+            function = namespace.get_matching_function([self.callee.name,], self.get_parameter_types(namespace, type_manager))
         elif isinstance(self.callee, Access):
-            if not namespace.has_matching_function(self.callee.hierarchy, self.get_parameter_types(namespace)):
-                raise ExpressionValidationException(f"Call to undefined function {self.callee.joined_name()}({self.format_parameter_types(namespace)})")
-            function = namespace.get_matching_function(self.callee.hierarchy, self.get_parameter_types(namespace))
+            if not namespace.has_matching_function(self.callee.hierarchy, self.get_parameter_types(namespace, type_manager)):
+                raise ExpressionValidationException(f"Call to undefined function {self.callee.joined_name()}({self.format_parameter_types(namespace, type_manager)})")
+            function = namespace.get_matching_function(self.callee.hierarchy, self.get_parameter_types(namespace, type_manager))
         else:
             # Shouldn't be anything else
             raise Exception
 
+        return function
+
+    def get_calling_to_name(self, namespace, type_manager):
         if isinstance(self.callee, Access):
-            func_name = namespace.get_matching_function_name(self.callee.hierarchy, self.get_parameter_types(namespace))
+            func_name = namespace.get_matching_function_name(self.callee.hierarchy, self.get_parameter_types(namespace, type_manager))
             self.callee.hierarchy[-1] = func_name
         elif isinstance(self.callee, Variable):
-            func_name = namespace.get_matching_function_name([self.callee.name,], self.get_parameter_types(namespace))
+            func_name = namespace.get_matching_function_name([self.callee.name,], self.get_parameter_types(namespace, type_manager))
             self.callee.name = func_name
+        return func_name
 
-        FunctionCounter.call_function(func_name)
+    
+    def resolve_type(self, namespace, type_manager):
+        function = self.get_calling_to(namespace, type_manager)
 
         if len(function.args) != len(self.args):
             raise ExpressionValidationException(f"Wrong number of args: expected {len(function.args)}, got {len(self.args)}")
         arg_pairs = zip(function.args, self.args)
         for i, (f, c) in enumerate(arg_pairs):
-            if not (f.type == c.resolve_type(namespace)):
-                print(function)
-                print(f, c)
-                print(f.type, c.resolve_type(namespace))
-                raise ExpressionValidationException(f"Argument mismatch: arg ({i}) {f.type} != {c.resolve_type(namespace)}")
+            if not (f.type == c.resolve_type(namespace, type_manager)):
+                raise ExpressionValidationException(f"Argument mismatch: arg ({i}) {f.type} != {c.resolve_type(namespace, type_manager)}")
             value_is_array = isinstance(c, Array)
             if isinstance(c, Variable):
                 value_is_array = value_is_array or namespace.get(c.name).is_array
@@ -231,11 +234,14 @@ class Return(Expression):
     def __init__(self, value):
         self.value = value
         
-    def resolve_type(self, namespace):
-        return self.value.resolve_type(namespace)
+    def resolve_type(self, namespace, type_manager):
+        return self.value.resolve_type(namespace, type_manager)
 
     def print(self, indent=0):
         print("    "*indent + f"<Return: {self.value}>")
+
+    def __repr__(self):
+        return f"<Return: {self.value}>"
         
 class Binary(Expression):
     def __init__(self, left, operator, right):
@@ -243,18 +249,18 @@ class Binary(Expression):
         self.operator = operator
         self.right = right
         
-    def resolve_type(self, namespace):
-        if not self.left.resolve_type(namespace) == self.right.resolve_type(namespace):
-             if (self.left.resolve_type(namespace), self.right.resolve_type(namespace)) in [(Types.INT, Types.STRING), (Types.STRING, Types.INT)]:
+    def resolve_type(self, namespace, type_manager):
+        if not self.left.resolve_type(namespace, type_manager) == self.right.resolve_type(namespace, type_manager):
+             if (self.left.resolve_type(namespace, type_manager), self.right.resolve_type(namespace, type_manager)) in [(Types.INT, Types.STRING), (Types.STRING, Types.INT)]:
                  pass
              else:
-                 raise ExpressionValidationException(f"Binary type mismatch {self.left.resolve_type(namespace)} != {self.right.resolve_type(namespace)}")
+                 raise ExpressionValidationException(f"Comparison type mismatch {self.left.resolve_type(namespace, type_manager)} != {self.right.resolve_type(namespace, type_manager)}")
         if self.operator.token_type in [TokenType.EQUAL_EQUAL, TokenType.NOT_EQUAL,
                                         TokenType.GREATER_EQUAL, TokenType.LESS_EQUAL,
                                         TokenType.LESS, TokenType.GREATER]:
             return Types.BOOL
         else:
-            return self.left.resolve_type(namespace)
+            return self.left.resolve_type(namespace, type_manager)
     
     def __repr__(self):
         return f"<Binary: {self.left} {self.operator.lexeme} {self.right}>"
@@ -302,12 +308,12 @@ class Array(Expression):
     def __repr__(self):
         return f"<Array: {self.elements}>"
     
-    def resolve_type(self, namespace):
+    def resolve_type(self, namespace, type_manager):
         if self.is_string:
             return Types.STRING
-        if not len(set([element.resolve_type(namespace) for element in self.elements])) == 1:
+        if not len(set([element.resolve_type(namespace, type_manager) for element in self.elements])) == 1:
             raise ExpressionValidationException("Multiple data types in array")
-        return self.elements[0].resolve_type(namespace)
+        return self.elements[0].resolve_type(namespace, type_manager)
 
     def resolve_array(self, namespace):
         return True
@@ -316,8 +322,11 @@ class Access(Expression):
     def __init__(self, hierarchy):
         self.hierarchy = hierarchy
         
-    def resolve_type(self, namespace):
+    def resolve_type(self, namespace, type_manager):
         #return namespace[self.hierarchy[0]].get(*self.hierarchy[1:]).type
+        group = namespace.get(*self.hierarchy[:-1])
+        if hasattr(group, "internal_structure"):
+            self.access_at_position = group.internal_structure[self.hierarchy[-1]][0]
         return namespace.get(*self.hierarchy).type
         
     def __repr__(self):
@@ -339,3 +348,26 @@ class AccessAssign(Expression):
         
     def print(self, indent=0):
         print("    "*indent + f"<AccessAssign: {'.'.join(self.access.hierarchy)} = {self.value}>")
+
+class Struct(Expression):
+    def __init__(self, name, members):
+        self.name = name
+        self.members = members
+
+    def __repr__(self):
+        return f"<Struct: {self.name} {self.members}"
+
+    def print(self, indent=0):
+        print("    "*indent + "<Struct:\n" + ",\n".join(["    "*(indent+1) + t.lexeme + " " + n.lexeme for t, n in self.members]) + "\n" + "    "*indent + ">")
+
+class StructCreate(Expression):
+    def __init__(self, struct_type, args):
+        self.struct_type = struct_type
+        self.args = args
+
+    def __repr__(self):
+        return f"<StructCreate: {self.struct_type.lexeme}({', '.join([str(arg) for arg in self.args])})"
+
+    def resolve_type(self, namespace, type_manager):
+        self.actual_type = type_manager.get_type(self.struct_type.lexeme)
+        return type_manager.get_type(self.struct_type.lexeme)

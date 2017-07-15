@@ -3,18 +3,28 @@ import os
 import os.path as op
 import codecs
 import uuid
+import collections
 
 from compiler.tokenizer import TokenType, Tokenizer
 from compiler.expressions import *
 from compiler.types import Types, TypeManager
 
+FunctionParameter = collections.namedtuple("FunctionParameter", ["type", "name", "reference", "is_array", "is_struct"])
+
 class ASTParser:
-    def __init__(self, tokens, compiler):
+    def __init__(self, tokens, compiler, main_file=None):
         self.tokens = tokens
         self.position = 0
         self.statements = []
         self.had_error = False
         self.compile, self.compile_file = compiler
+        if not main_file is None:
+            if op.exists(main_file):
+                self.main_file = op.abspath(main_file)
+            else:
+                self.main_file = main_file
+        else:
+            self.main_file = None
         self.sub_trees = {}
         
     def print_error(self, token, message):
@@ -43,6 +53,7 @@ class ASTParser:
             token, line_num = self.tokens[self.position-1], self.tokens[self.position-1].line
         else:
             token, line_num = self.tokens[self.position], self.tokens[self.position].line
+        time.sleep(0.01)
         self.print_error(token, f"{error_message} on line {token.line} in file {token.source_file}")
     
     def previous(self):
@@ -57,17 +68,23 @@ class ASTParser:
     
     def at_end(self):
         return self.position >= len(self.tokens) or self.tokens[self.position].token_type == TokenType.EOF
-        
+
+    def token_to_expression(self, token, expression):
+        expression.source_line = token.source_line
+        expression.source_file = token.source_file
+        expression.source_line_num = token.source_line_num
+        expression.is_in_main_file = token.source_file == self.main_file
+        return expression
         
     def parse(self):
+        # print(self.tokens)
         while not self.at_end():
             token = self.tokens[self.position]
             next_expression = self.declaration()
-            if not next_expression is None:
-                next_expression.source_line = token.source_line
-                next_expression.source_file = token.source_file
-                next_expression.source_line_num = token.source_line_num
-                self.statements.append(next_expression)
+            if next_expression is None:
+                continue
+            self.token_to_expression(token, next_expression)
+            self.statements.append(next_expression)
         return self.statements, self.sub_trees, self.had_error
     
     def declaration(self, no_let_semicolon=False):
@@ -79,7 +96,8 @@ class ASTParser:
             return self.let(no_let_semicolon)
         if self.match(TokenType.RETURN):
             return self.return_statement()
-        
+        if self.match(TokenType.STRUCT):
+            return self.struct()
         return self.statement()
     
     def statement(self):
@@ -168,7 +186,9 @@ class ASTParser:
                 self.consume(TokenType.AMPERSAND)
                 reference = True
             arg_name = self.consume(TokenType.IDENTIFIER, f"Expected name for arg {arg_num}")
-            args.append((arg_type, arg_name, reference, array))
+            #args.append((arg_type, arg_name, reference, array))
+            # will determine whether parameter is a struct at type checking time
+            args.append(FunctionParameter(arg_type, arg_name, reference, array, False))
             if self.check(TokenType.RIGHT_BRACKET):
                 break
             self.consume(TokenType.COMMA, "Comma expected in function args after arg{arg_num}")
@@ -180,20 +200,36 @@ class ASTParser:
         function_body = self.block()
         return_type = rtype#TypeManager.get_type(rtype.lexeme)
 
-        if not name.lexeme == "main":
-            name.lexeme += f"###|{','.join([arg[0].lexeme + ('[]' if arg[3] else '') for arg in args])}|{name.source_file}"
+        if not name.lexeme == "main" or name.source_file != self.main_file:
+            name.lexeme += f"###|{','.join([arg.type.lexeme + ('[]' if arg.is_array else '') for arg in args])}|{name.source_file}"
+        function = Function(name, return_type, args, function_body, name.source_file)
+        if name.lexeme == "main":
+            function.main_function = True
+        return function
 
-        return Function(name, return_type, args, function_body, name.source_file)
-    
+    def struct(self):
+        name = self.consume(TokenType.IDENTIFIER, "Expected name for struct")
+        self.consume(TokenType.LEFT_BRACE, "Expected '{' to open struct block")
+        members = []
+        while True:
+            if self.match(TokenType.RIGHT_BRACE):
+                break
+            member_type = self.consume(TokenType.IDENTIFIER, "Expected struct variable type")
+            member_name = self.consume(TokenType.IDENTIFIER, "Expected struct variable name")
+            members.append((member_type, member_name))
+            if not self.match(TokenType.COMMA):
+                self.consume(TokenType.RIGHT_BRACE, "Expected right brace to close struct")
+                break
+
+        return Struct(name, members)
+
     def block(self):
         self.consume(TokenType.LEFT_BRACE, "Expected '{' to open block")
         statements = []
         while not self.check(TokenType.RIGHT_BRACE) and not self.at_end():
             starting_token = self.tokens[self.position]
             next_expression = self.declaration()
-            next_expression.source_line = starting_token.source_line
-            next_expression.source_file = starting_token.source_file
-            next_expression.source_line_num = starting_token.source_line_num
+            self.token_to_expression(starting_token, next_expression)
             statements.append(next_expression)
         self.consume(TokenType.RIGHT_BRACE, "Expected '}' to close block")
         return Block(statements)
@@ -292,7 +328,8 @@ class ASTParser:
         args = []
         if not self.check(TokenType.RIGHT_BRACKET):
             while True:
-                args.append(self.expression())
+                token = self.tokens[self.position]
+                args.append(self.token_to_expression(token, self.expression()))
                 if not self.match(TokenType.COMMA):
                     break
         paren = self.consume(TokenType.RIGHT_BRACKET, "Expected ')' to close function call")
@@ -366,16 +403,32 @@ class ASTParser:
             self.consume(TokenType.RIGHT_SQUARE, "Expected closing square bracket")
         name = self.consume(TokenType.IDENTIFIER, "Expected variable name")
         self.consume(TokenType.EQUAL, "Expected '=' in let statement")
-        initial = self.expression()
-        if vtype.lexeme == "string":
-            is_array = True
-            array_length = Literal(len(initial.elements), Types.INT)
+        if self.match(TokenType.NEW):
+            if is_array:
+                raise Exception("Cannot be struct and array")
+            initial = self.struct_create()
+        else:
+            initial = self.expression()
+            if vtype.lexeme == "string":
+                is_array = True
+                array_length = Literal(len(initial.elements), Types.INT)
             
         if not no_semicolon:
             self.consume(TokenType.SEMICOLON, "Expected semicolon following let statement")
         
         branch = Let(vtype, name, initial, is_array, array_length)
         return branch
+
+    def struct_create(self):
+        name = self.consume(TokenType.IDENTIFIER, "Expected a type for struct creation")
+        self.consume(TokenType.LEFT_BRACKET, "Expected a left bracket to open struct")
+        args = []
+        while True:
+            args.append(self.expression())
+            if not self.match(TokenType.COMMA):
+                break
+        self.consume(TokenType.RIGHT_BRACKET, "Expected a right bracket to close struct")
+        return StructCreate(name, args)
     
     def return_statement(self):
         value = None

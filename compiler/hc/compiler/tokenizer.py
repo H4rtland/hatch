@@ -42,6 +42,8 @@ class TokenType(Enum):
     FUNCTION = auto()
     IMPORT = auto()
     AMPERSAND = auto()
+    STRUCT = auto()
+    NEW = auto()
     
     
 class Token:
@@ -90,6 +92,8 @@ KEYWORDS = {
     "let": TokenType.LET,
     "function": TokenType.FUNCTION,
     "import": TokenType.IMPORT,
+    "struct": TokenType.STRUCT,
+    "new": TokenType.NEW,
 }
     
 class Tokenizer:

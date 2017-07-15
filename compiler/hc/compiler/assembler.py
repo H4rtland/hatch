@@ -13,9 +13,10 @@ SAVED_REGISTERS = 2
         
             
 class Assembler:
-    def __init__(self, ast, sub_trees):
+    def __init__(self, ast, sub_trees, called_function_names):
         self.ast = ast
         self.sub_trees = sub_trees
+        self.called_function_names = called_function_names
         # print("assembler", ast, sub_trees)
         
         self.had_error = False
@@ -115,6 +116,8 @@ class Assembler:
 
 
         for function_name, function in self.non_main_functions.items():
+            if function.name.lexeme not in self.called_function_names:
+                continue
             location = len(self.instructions)
             if isinstance(function_name, str):
                 self.function_addresses[function_name] = location
@@ -127,7 +130,7 @@ class Assembler:
             namespace = NamespaceGroup(self.globals, self.stack)
             parameter_identifiers = []
             for arg in function.args:
-                parameter_identifiers.append(namespace.let(arg[1].lexeme, arg[3]))
+                parameter_identifiers.append(namespace.let(arg.name.lexeme, is_array=arg.is_array, is_struct=arg.is_struct))
             self.current_module_name = function_name[0]
             self.parse(namespace, function.body, is_function=True, parameter_identifiers=parameter_identifiers)
         
@@ -146,7 +149,7 @@ class Assembler:
                     else:
                         print(self.function_addresses)
                         time.sleep(0.05)
-                        raise Exception("Couldn't find function address for", tuple(instruction.func_name.name))
+                        raise Exception("Couldn't find function address for", instruction.func_name.name)
                 elif isinstance(instruction.func_name, Access):
                     #print("Looking up in address book", tuple(instruction.func_name.hierarchy))
                     if instruction.func_name.hierarchy[-1] in self.function_addresses:
@@ -174,6 +177,15 @@ class Assembler:
             self.parse_binary(namespace, binary.left)
         elif isinstance(binary.left, Index):
             self.parse_index(namespace, binary.left.variable, binary.left.index, register=Register.AX)
+        elif isinstance(binary.left, Access):
+            if hasattr(binary.left, "access_at_position"):
+                self.add_instruction(Instruction.OFF, binary.left.access_at_position)
+                self.add_instruction(Instruction.LDA,
+                                     self.stack.id_on_stack(namespace.get_namespace()[binary.left.hierarchy[0]]),
+                                     stack_flag=True)
+                self.add_instruction(Instruction.OFF, 0)
+            else:
+                raise Exception("Don't know which position to access at")
         else:
             raise Exception("Unhandled binary left input")
         
@@ -188,6 +200,15 @@ class Assembler:
             self.add_instruction(Instruction.MOV, mov(Register.BX, Register.FX)) # MOV BX <- FX
         elif isinstance(binary.right, Index):
             self.parse_index(namespace, binary.right.variable, binary.right.index, register=Register.BX)
+        elif isinstance(binary.right, Access):
+            if hasattr(binary.right, "access_at_position"):
+                self.add_instruction(Instruction.OFF, binary.right.access_at_position)
+                self.add_instruction(Instruction.LDB,
+                                     self.stack.id_on_stack(namespace.get_namespace()[binary.right.hierarchy[0]]),
+                                     stack_flag=True)
+                self.add_instruction(Instruction.OFF, 0)
+            else:
+                raise Exception("Don't know which position to access at")
         else:
             raise Exception("Unhandled binary right input")
             
@@ -217,6 +238,8 @@ class Assembler:
             elif isinstance(arg, Variable):
                 if namespace.is_array(arg.name):
                     self.add_instruction(Instruction.DUP, self.stack.id_on_stack(namespace.get_namespace()[arg.name]))
+                elif namespace.is_struct(arg.name):
+                    self.add_instruction(Instruction.DUP, self.stack.id_on_stack(namespace.get_namespace()[arg.name]))
                 else:
                     self.add_instruction(Instruction.LDA, self.stack.id_on_stack(namespace.get_namespace()[arg.name]), stack_flag=True)
                     self.add_instruction(Instruction.PUSH, 1)
@@ -236,7 +259,16 @@ class Assembler:
                 self.add_instruction(Instruction.STA, 1, stack_flag=True)
             elif isinstance(arg, Array):
                 self.load_array(namespace, arg, temporary=True)
-                
+            elif isinstance(arg, Access):
+                if hasattr(arg, "access_at_position"):
+                    self.add_instruction(Instruction.OFF, arg.access_at_position)
+                    self.add_instruction(Instruction.LDA, self.stack.id_on_stack(namespace.get_namespace()[arg.hierarchy[0]]), stack_flag=True)
+                    self.add_instruction(Instruction.OFF, 0)
+                    self.add_instruction(Instruction.PUSH, 1)
+                    self.add_instruction(Instruction.STA, 1, stack_flag=True)
+                else:
+                    raise Exception("Don't know which position to access at")
+
             else:
                 raise Exception("Unhandled function argument")
             extra_stack_vars += 1
@@ -359,8 +391,17 @@ class Assembler:
             self.add_instruction(Instruction.MOV, mov(Register.AX, Register.FX))
         elif isinstance(condition.left, Index):
             self.parse_index(namespace, condition.left.variable, condition.left.index, register=Register.AX)
+        elif isinstance(condition.left, Access):
+            if hasattr(condition.left, "access_at_position"):
+                self.add_instruction(Instruction.OFF, condition.left.access_at_position)
+                self.add_instruction(Instruction.LDA,
+                                     self.stack.id_on_stack(namespace.get_namespace()[condition.left.hierarchy[0]]),
+                                     stack_flag=True)
+                self.add_instruction(Instruction.OFF, 0)
+            else:
+                raise Exception("Don't know which position to access at")
         else:
-            raise Exception("Unhandled if statement condition")
+            raise Exception(f"Unhandled if statement condition, {condition}")
         
         if isinstance(condition.right, Literal):
             self.add_instruction(Instruction.LDB, int(condition.right.value))
@@ -371,6 +412,13 @@ class Assembler:
             self.add_instruction(Instruction.MOV, mov(Register.BX, Register.FX))
         elif isinstance(condition.right, Index):
             self.parse_index(namespace, condition.left.variable, condition.left.index, register=Register.BX)
+        elif isinstance(condition.right, Access):
+            if hasattr(condition.right, "access_at_position"):
+                self.add_instruction(Instruction.OFF, condition.right.access_at_position)
+                self.add_instruction(Instruction.LDB,
+                                     self.stack.id_on_stack(namespace.get_namespace()[condition.right.hierarchy[0]]),
+                                     stack_flag=True)
+                self.add_instruction(Instruction.OFF, 0)
         else:
             raise Exception("Unhandled if statement condition")
     
@@ -434,7 +482,7 @@ class Assembler:
         
     def parse_let(self, namespace, statement):
         if isinstance(statement.initial, Literal):
-            identifier = namespace.let(statement.name.lexeme, False)
+            identifier = namespace.let(statement.name.lexeme)
             value = int(statement.initial.value)
             self.add_instruction(Instruction.PUSH, 1)
             self.add_instruction(Instruction.LDA, value) # LDA value
@@ -442,7 +490,7 @@ class Assembler:
         elif isinstance(statement.initial, Call):
             self.parse_call(namespace, statement.initial.callee, statement.initial.args)
             self.add_instruction(Instruction.MOV, mov(Register.AX, Register.FX)) # MOV AX <- FX
-            identifier = namespace.let(statement.name.lexeme, False)
+            identifier = namespace.let(statement.name.lexeme)
             self.add_instruction(Instruction.PUSH, 1)
             self.add_instruction(Instruction.STA, self.stack.id_on_stack(identifier), stack_flag=True) # STA func_return
         elif isinstance(statement.initial, Binary):
@@ -452,42 +500,54 @@ class Assembler:
                     if statement.initial.right.value == 1:
                         if statement.initial.operator.token_type == TokenType.PLUS:
                             self.add_instruction(Instruction.LDA, self.stack.id_on_stack(namespace.get_namespace()[statement.initial.left.name]), stack_flag=True)
-                            identifier = namespace.let(statement.name.lexeme, False)
+                            identifier = namespace.let(statement.name.lexeme)
                             self.add_instruction(Instruction.PUSH, 1)
                             self.add_instruction(Instruction.STA, self.stack.id_on_stack(namespace.get_namespace()[statement.name]), stack_flag=True)
                             self.add_instruction(Instruction.INC, self.stack.id_on_stack(namespace.get_namespace()[statement.name]), stack_flag=True)
                             return
                         elif statement.initial.operator.token_type == TokenType.MINUS:
                             self.add_instruction(Instruction.LDA, self.stack.id_on_stack(namespace.get_namespace()[statement.initial.left.name]), stack_flag=True)
-                            identifier = namespace.let(statement.name.lexeme, False)
+                            identifier = namespace.let(statement.name.lexeme)
                             self.add_instruction(Instruction.PUSH, 1)
                             self.add_instruction(Instruction.STA, self.stack.id_on_stack(namespace.get_namespace()[statement.name.lexeme]), stack_flag=True)
                             self.add_instruction(Instruction.DEC, self.stack.id_on_stack(namespace.get_namespace()[statement.name.lexeme]), stack_flag=True)
                             return
             self.parse_binary(namespace, statement.initial)
-            identifier = namespace.let(statement.name.lexeme, False)
+            identifier = namespace.let(statement.name.lexeme)
             self.add_instruction(Instruction.PUSH, 1)
             self.add_instruction(Instruction.STA, self.stack.id_on_stack(identifier), stack_flag=True) # STA sum
         elif isinstance(statement.initial, Variable):
             if statement.initial.name in self.function_names:
                 self.add_instruction(Instruction.LDA, FunctionAddress(statement.initial))
                 self.add_instruction(Instruction.PUSH, 1)
-                identifier = namespace.let(statement.name.lexeme, False)
+                identifier = namespace.let(statement.name.lexeme)
                 self.add_instruction(Instruction.STA, self.stack.id_on_stack(identifier), stack_flag=True)
             else:
                 self.add_instruction(Instruction.LDA, self.stack.id_on_stack(namespace.get_namespace()[statement.initial.name]), stack_flag=True)
                 self.add_instruction(Instruction.PUSH, 1)
-                identifier = namespace.let(statement.name.lexeme, False)
+                identifier = namespace.let(statement.name.lexeme)
                 self.add_instruction(Instruction.STA, self.stack.id_on_stack(identifier), stack_flag=True)
         elif isinstance(statement.initial, Array):
-            identifier = namespace.let(statement.name.lexeme, True)
+            identifier = namespace.let(statement.name.lexeme, is_array=True)
             self.load_array(namespace, statement.initial, force_length=statement.length.value)
             
         elif isinstance(statement.initial, Index):
             self.parse_index(namespace, statement.initial.variable, statement.initial.index, register=Register.AX)
             self.add_instruction(Instruction.PUSH, 1)
-            identifier = namespace.let(statement.name.lexeme, False)
+            identifier = namespace.let(statement.name.lexeme,)
             self.add_instruction(Instruction.STA, self.stack.id_on_stack(identifier), stack_flag=True)
+        elif isinstance(statement.initial, StructCreate):
+            internal_structure = statement.initial.actual_type.internal_structure
+            identifier = namespace.let(statement.name.lexeme, is_struct=True)
+            self.add_instruction(Instruction.PUSH, len(internal_structure)+1)
+            self.add_instruction(Instruction.LDA, len(internal_structure))
+            self.add_instruction(Instruction.STA, 1, stack_flag=True)
+            for position, arg in enumerate(statement.initial.args, start=1):
+                if isinstance(arg, Literal):
+                    self.add_instruction(Instruction.LDA, arg.value)
+                    self.add_instruction(Instruction.OFF, position)
+                    self.add_instruction(Instruction.STA, 1, stack_flag=True)
+            self.add_instruction(Instruction.OFF, 0)
         else:
             raise Exception("Unhandled let statement")
         
@@ -741,7 +801,7 @@ class Assembler:
                 
         #for name in namespace.locals:
         #    self.stack.free(namespace.locals[name])
-    
+
     def free_local_stack(self, namespace, parameter_identifiers=None, is_return=False):
         if parameter_identifiers is None:
             parameter_identifiers = []
@@ -753,7 +813,8 @@ class Assembler:
             for identifier in self.stack.stack[::-1]:
                 if not identifier in reverse_locals:
                     break
-                if not namespace.is_array(reverse_locals[identifier]):
+
+                if (not namespace.is_array(reverse_locals[identifier])) and (not namespace.is_struct(reverse_locals[identifier])):
                     streak += 1
                 else:
                     # free single byte variables from memory

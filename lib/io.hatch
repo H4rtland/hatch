@@ -3,9 +3,28 @@ function void print(int n) {
     __internal_print_char(10c);
 }
 
+
 function void print(char n) {
     __internal_print_char(n);
 }
+
+
+function void print(bool value) {
+    if (value == true) {
+        __internal_print_char(116c);
+        __internal_print_char(114c);
+        __internal_print_char(117c);
+        __internal_print_char(101c);
+    } else {
+        __internal_print_char(102c);
+        __internal_print_char(97c);
+        __internal_print_char(108c);
+        __internal_print_char(115c);
+        __internal_print_char(101c);
+    }
+    __internal_print_char(10c);
+}
+
 
 function void print(string data) {
     let char x = 0c;
@@ -16,7 +35,8 @@ function void print(string data) {
     __internal_print_char(10c); // newline
 }
 
-/*function void print(int[] data) {
+
+function void print(int[] data) {
     let int x = 0;
     for(let int i=0; i<data; i=i+1) {
         x = data[i];
@@ -25,4 +45,4 @@ function void print(string data) {
         __internal_print_char(32c);
     }
     __internal_print_char(10c);
-}*/
+}
