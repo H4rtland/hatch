@@ -10,7 +10,7 @@ function void print(char n) {
 
 
 function void print(bool value) {
-    if (value == true) {
+    if (value) {
         __internal_print_char(116c);
         __internal_print_char(114c);
         __internal_print_char(117c);

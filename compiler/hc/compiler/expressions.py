@@ -185,7 +185,7 @@ class Call(Expression):
     def format_parameter_types(self, namespace, type_manager):
         types = []
         for t, a in self.get_parameter_types(namespace, type_manager):
-            types.append(t.name + "[]" if a else "")
+            types.append(t.name + ("[]" if a else ""))
         return ", ".join(types)
 
     def get_calling_to(self, namespace, type_manager):
@@ -214,11 +214,11 @@ class Call(Expression):
 
     
     def resolve_type(self, namespace, type_manager):
-        function = self.get_calling_to(namespace, type_manager)
+        func = self.get_calling_to(namespace, type_manager)
 
-        if len(function.args) != len(self.args):
-            raise ExpressionValidationException(f"Wrong number of args: expected {len(function.args)}, got {len(self.args)}")
-        arg_pairs = zip(function.args, self.args)
+        if len(func.args) != len(self.args):
+            raise ExpressionValidationException(f"Wrong number of args: expected {len(func.args)}, got {len(self.args)}")
+        arg_pairs = zip(func.args, self.args)
         for i, (f, c) in enumerate(arg_pairs):
             if not (f.type == c.resolve_type(namespace, type_manager)):
                 raise ExpressionValidationException(f"Argument mismatch: arg ({i}) {f.type} != {c.resolve_type(namespace, type_manager)}")
@@ -228,7 +228,7 @@ class Call(Expression):
             if f.is_array != value_is_array:
                 raise ExpressionValidationException(f"Argument {i} was {'' if f.is_array else 'not '}expecting an array")
         
-        return function.return_type
+        return func.return_type
     
 class Return(Expression):
     def __init__(self, value):

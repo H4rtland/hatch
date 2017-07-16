@@ -9,21 +9,10 @@ function int wheels_plus_seats(Car car) {
     return car.wheels + car.seats;
 }
 
-function void pointless_function() {
-    let int x = 0;
-    for (let int i=0; i<5; i=i+1) {
-        x = i+1;
-    }
-}
-
 function void main() {
     let Car ford = new Car(4, 5);
     io.print(ford.wheels);
     io.print(ford.seats);
     io.print(wheels_plus_seats(ford));
-    if (ford.wheels == 4) {
-        io.print(true);
-    } else {
-        io.print(false);
-    }
+    io.print(ford.wheels == 4);
 }

@@ -2,6 +2,7 @@ import uuid
 import sys
 from collections import namedtuple
 import copy
+import contextlib
 
 import time
 
@@ -120,9 +121,10 @@ class TypeChecker:
         
     def print_error(self, error):
         time.sleep(0.01)
-        print(f"File: {self.checking_expression.source_file}", file=sys.stderr)
-        print(f"Line {self.checking_expression.source_line_num}: {self.checking_expression.source_line}", file=sys.stderr)
-        print(error, file=sys.stderr)
+        with contextlib.redirect_stdout(sys.stderr):
+            print(f"File: {self.checking_expression.source_file}")
+            print(f"Line {self.checking_expression.source_line_num}: {self.checking_expression.source_line}")
+            print(error)
         sys.exit(0)
         #raise Exception(error)
         

@@ -221,6 +221,13 @@ class Assembler:
             self.add_instruction(Instruction.MUL, 0)
         elif binary.operator.token_type == TokenType.SLASH:
             self.add_instruction(Instruction.DIV, 0)
+        elif binary.operator.token_type == TokenType.EQUAL_EQUAL:
+            self.add_instruction(Instruction.CMP, 0)
+            self.add_instruction(Instruction.LDA, 0)
+            self.add_instruction(Instruction.JNE, 0)
+            jne_location = len(self.instructions)
+            self.add_instruction(Instruction.LDA, 1)
+            self.instructions[jne_location-1] = len(self.instructions)
         else:
             raise Exception("Unhandled binary operator")
             
