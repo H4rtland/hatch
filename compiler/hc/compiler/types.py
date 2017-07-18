@@ -48,3 +48,6 @@ class TypeManager:
         if type_name in self.defined_types:
             return self.defined_types[type_name]
         raise Exception(f"Unknown type access \"{type_name}\"")
+
+    def exists(self, type_name):
+        return type_name in self.defined_types

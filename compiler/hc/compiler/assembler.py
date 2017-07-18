@@ -554,6 +554,12 @@ class Assembler:
                     self.add_instruction(Instruction.LDA, arg.value)
                     self.add_instruction(Instruction.OFF, position)
                     self.add_instruction(Instruction.STA, 1, stack_flag=True)
+                elif isinstance(arg, Variable):
+                    self.add_instruction(Instruction.LDA,
+                                         self.stack.id_on_stack(namespace.get_namespace()[arg.name]),
+                                         stack_flag=True)
+                    self.add_instruction(Instruction.OFF, position)
+                    self.add_instruction(Instruction.STA, 1, stack_flag=True)
             self.add_instruction(Instruction.OFF, 0)
         else:
             raise Exception("Unhandled let statement")

@@ -10,6 +10,7 @@ from compiler.expressions import *
 from compiler.types import Types, TypeManager
 
 FunctionParameter = collections.namedtuple("FunctionParameter", ["type", "name", "reference", "is_array", "is_struct"])
+StructMember = collections.namedtuple("StructMember", ["type", "name"])
 
 class ASTParser:
     def __init__(self, tokens, compiler, main_file=None):
@@ -208,7 +209,7 @@ class ASTParser:
         return function
 
     def struct(self):
-        name = self.consume(TokenType.IDENTIFIER, "Expected name for struct")
+        name = self.consume(TokenType.IDENTIFIER, "Expected name for struct").lexeme
         self.consume(TokenType.LEFT_BRACE, "Expected '{' to open struct block")
         members = []
         while True:
@@ -216,7 +217,7 @@ class ASTParser:
                 break
             member_type = self.consume(TokenType.IDENTIFIER, "Expected struct variable type")
             member_name = self.consume(TokenType.IDENTIFIER, "Expected struct variable name")
-            members.append((member_type, member_name))
+            members.append(StructMember(member_type.lexeme, member_name.lexeme))
             if not self.match(TokenType.COMMA):
                 self.consume(TokenType.RIGHT_BRACE, "Expected right brace to close struct")
                 break

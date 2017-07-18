@@ -10,7 +10,8 @@ function int wheels_plus_seats(Car car) {
 }
 
 function void main() {
-    let Car ford = new Car(4, 5);
+    let int wheels = 4;
+    let Car ford = new Car(wheels, 5);
     io.print(ford.wheels);
     io.print(ford.seats);
     io.print(wheels_plus_seats(ford));

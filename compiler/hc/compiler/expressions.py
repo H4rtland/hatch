@@ -326,6 +326,8 @@ class Access(Expression):
         #return namespace[self.hierarchy[0]].get(*self.hierarchy[1:]).type
         group = namespace.get(*self.hierarchy[:-1])
         if hasattr(group, "internal_structure"):
+            if not group.contains(self.hierarchy[-1]):
+                raise ExpressionValidationException(f"Value {self.hierarchy[-2]} has no attribute \"{self.hierarchy[-1]}\"")
             self.access_at_position = group.internal_structure[self.hierarchy[-1]][0]
         return namespace.get(*self.hierarchy).type
         
@@ -358,7 +360,7 @@ class Struct(Expression):
         return f"<Struct: {self.name} {self.members}"
 
     def print(self, indent=0):
-        print("    "*indent + "<Struct:\n" + ",\n".join(["    "*(indent+1) + t.lexeme + " " + n.lexeme for t, n in self.members]) + "\n" + "    "*indent + ">")
+        print("    "*indent + "<Struct:\n" + ",\n".join(["    "*(indent+1) + t + " " + n for t, n in self.members]) + "\n" + "    "*indent + ">")
 
 class StructCreate(Expression):
     def __init__(self, struct_type, args):

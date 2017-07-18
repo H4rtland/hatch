@@ -148,8 +148,8 @@ class TypeChecker:
                 if isinstance(branch, Struct):
                     internal_structure = {}
                     for position, (member_type, name) in enumerate(branch.members, start=1):
-                        internal_structure[name.lexeme] = (position, type_manager.get_type(member_type.lexeme))
-                    struct_type = Type(branch.name.lexeme, len(branch.members), internal_structure=internal_structure)
+                        internal_structure[name] = (position, type_manager.get_type(member_type))
+                    struct_type = Type(branch.name, len(branch.members), internal_structure=internal_structure)
                     type_manager.define_type(struct_type)
                     #struct = NamespaceGroup()
                     #for member_type, name in branch.members:
@@ -299,6 +299,18 @@ class TypeChecker:
         self.check_branch(binary.left, namespace, type_manager)
         self.check_branch(binary.right, namespace, type_manager)
 
-    @checker_for(Literal, Variable)
+    @checker_for(Index)
+    def check_access(self, index: Index, namespace, type_manager):
+        self.check_branch(index.index, namespace, type_manager)
+        if not index.index.resolve_type(namespace, type_manager) == Types.INT:
+            self.print_error("Index supposed to be an int")
+
+    @checker_for(Struct)
+    def check_struct(self, struct: Struct, namespace, type_manager):
+        for member in struct.members:
+            if not type_manager.exists(member.type):
+                self.print_error(f"Type {member.type} does not exist")
+
+    @checker_for(Literal, Variable, Access)
     def check_pass(self, boring_expression, namespace, type_manager):
         pass
