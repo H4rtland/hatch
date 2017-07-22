@@ -118,6 +118,8 @@ class TypeChecker:
         # like "current_function" which could otherwise be used in the namespace.
         self.current_function_identifier = uuid.uuid4().hex
         self.current_function_name = None
+
+        self.loop_depth = 0
         
     def print_error(self, error):
         time.sleep(0.01)
@@ -284,14 +286,18 @@ class TypeChecker:
         if not for_loop.condition.resolve_type(namespace, type_manager) == Types.BOOL:
             self.print_error("Expected boolean expression for while loop condition")
         self.check_branch(for_loop.action, namespace, type_manager)
+        self.loop_depth += 1
         self.check_branch(for_loop.block, namespace, type_manager)
+        self.loop_depth -= 1
         
     @checker_for(While)
     def check_while(self, while_loop: While, namespace, type_manager):
         self.check_branch(while_loop.condition, namespace, type_manager)
         if not while_loop.condition.resolve_type(namespace, type_manager) == Types.BOOL:
             self.print_error("Expected boolean expression for while loop condition")
+        self.loop_depth += 1
         self.check_branch(while_loop.block, namespace, type_manager)
+        self.loop_depth -= 1
         
     @checker_for(Binary)
     def check_binary(self, binary: Binary, namespace, type_manager):
@@ -310,6 +316,11 @@ class TypeChecker:
         for member in struct.members:
             if not type_manager.exists(member.type):
                 self.print_error(f"Type {member.type} does not exist")
+
+    @checker_for(Break, Continue)
+    def check_flow_control(self, control, namespace, type_manager):
+        if self.loop_depth == 0:
+            self.print_error(f"{control.__class__.__name__} statement outside of loop")
 
     @checker_for(Literal, Variable, Access)
     def check_pass(self, boring_expression, namespace, type_manager):
