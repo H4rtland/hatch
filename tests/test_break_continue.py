@@ -1,3 +1,7 @@
+import hc
+import vm
+
+hatch = """
 import io;
 
 function void main() {
@@ -23,3 +27,13 @@ function void main() {
         io.print(i);
     }
 }
+"""
+
+
+def test_break_continue():
+    instructions = hc.compile(hatch)
+
+    virtual_machine = vm.OctoEngine(True)
+    virtual_machine.load(instructions)
+    output = virtual_machine.run()
+    assert output == [i for i in range(2, 31, 2)] + list(range(0, 6))

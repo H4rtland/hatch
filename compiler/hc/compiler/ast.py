@@ -36,8 +36,8 @@ class ASTParser:
         print("", file=sys.stderr)
         self.had_error = True
     
-    def check(self, token_type):
-        return self.tokens[self.position].token_type == token_type
+    def check(self, *token_types):
+        return self.tokens[self.position].token_type in token_types
     
     def match(self, *token_types):
         if self.tokens[self.position].token_type in token_types:
@@ -112,6 +112,8 @@ class ASTParser:
             return self.for_()
         if self.match(TokenType.WHILE):
             return self.while_loop()
+        if self.check(TokenType.BREAK, TokenType.CONTINUE):
+            return self.flow_control()
         
         return self.expression_statement()
     
@@ -459,3 +461,11 @@ class ASTParser:
         body = self.statement()
         
         return While(condition, body)
+
+    def flow_control(self):
+        if self.match(TokenType.BREAK):
+            self.consume(TokenType.SEMICOLON, "Expected semicolon following break statement")
+            return Break()
+        if self.match(TokenType.CONTINUE):
+            self.consume(TokenType.SEMICOLON, "Expected semicolon following continue statement")
+            return Continue()

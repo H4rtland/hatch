@@ -44,6 +44,8 @@ class TokenType(Enum):
     AMPERSAND = auto()
     STRUCT = auto()
     NEW = auto()
+    BREAK = auto()
+    CONTINUE = auto()
     
     
 class Token:
@@ -94,6 +96,8 @@ KEYWORDS = {
     "import": TokenType.IMPORT,
     "struct": TokenType.STRUCT,
     "new": TokenType.NEW,
+    "break": TokenType.BREAK,
+    "continue": TokenType.CONTINUE,
 }
     
 class Tokenizer:

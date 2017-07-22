@@ -373,3 +373,23 @@ class StructCreate(Expression):
     def resolve_type(self, namespace, type_manager):
         self.actual_type = type_manager.get_type(self.struct_type.lexeme)
         return type_manager.get_type(self.struct_type.lexeme)
+
+class Break(Expression):
+    def __init__(self):
+        pass
+
+    def __repr__(self):
+        return "<Break>"
+
+    def print(self, indent=0):
+        print("    "*indent + str(self))
+
+class Continue(Expression):
+    def __init__(self):
+        pass
+
+    def __repr__(self):
+        return "<Continue>"
+
+    def print(self, indent=0):
+        print("    "*indent + str(self))

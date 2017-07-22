@@ -1,6 +1,7 @@
 import sys
 import time
 from enum import Enum
+from collections import namedtuple
 
 from compiler.expressions import *
 from compiler.tokenizer import TokenType
@@ -10,7 +11,8 @@ from compiler.instructions import Instruction, Register, mov
 import uuid
 
 SAVED_REGISTERS = 2
-        
+
+LoopControlBytes = namedtuple("LoopControlBytes", ["breaks", "continues"])
             
 class Assembler:
     def __init__(self, ast, sub_trees, called_function_names):
@@ -23,6 +25,8 @@ class Assembler:
         
         self.instructions = []
         self.stack = Stack()
+
+        self.loop_control_bytes = []
 
         self.globals = NamespaceGroup(None, self.stack)
         self.globals.add("__internal_print", 0)
@@ -669,6 +673,7 @@ class Assembler:
         self.add_instruction(Instruction.CMP, 0)
         self.add_instruction(compare_inst, 0)
         compare_data_byte = len(self.instructions)-1
+        self.loop_control_bytes.append(LoopControlBytes([], []))
         block_namespace = NamespaceGroup(namespace, self.stack)
         self.parse(block_namespace, statement.block, dont_free=True)
         action_start = len(self.instructions)
@@ -677,11 +682,35 @@ class Assembler:
         self.add_instruction(Instruction.JMP, comparison_start)
         end_addr = len(self.instructions)
         self.instructions[compare_data_byte] = end_addr
+
+        for b in self.loop_control_bytes[-1].breaks:
+            self.instructions[b] = end_addr
+        for c in self.loop_control_bytes[-1].continues:
+            self.instructions[c] = comparison_start
+        self.loop_control_bytes.pop()
         
         self.add_instruction(Instruction.FREE, 1)
         self.stack.unstack(1)
         
     def parse_while(self, namespace, statement):
+        if isinstance(statement.condition, Literal):
+            if not statement.condition.value:
+                return
+            else:
+                loop_start = len(self.instructions)
+                self.loop_control_bytes.append(LoopControlBytes([], []))
+                block_namespace = NamespaceGroup(namespace, self.stack)
+                self.parse(block_namespace, statement.block, dont_free=True)
+                self.free_local_stack(block_namespace)
+                self.add_instruction(Instruction.JMP, loop_start)
+                loop_end = len(self.instructions)
+                for b in self.loop_control_bytes[-1].breaks:
+                    self.instructions[b] = loop_end
+                for c in self.loop_control_bytes[-1].continues:
+                    self.instructions[c] = loop_start
+                self.loop_control_bytes.pop()
+                return
+
         compare_inst = {
             TokenType.EQUAL_EQUAL: Instruction.JNE,
             TokenType.LESS: Instruction.JGE,
@@ -694,13 +723,19 @@ class Assembler:
         self.add_instruction(Instruction.CMP, 0)
         self.add_instruction(compare_inst, 0)
         compare_data_byte = len(self.instructions)-1
+        self.loop_control_bytes.append(LoopControlBytes([], []))
         block_namespace = NamespaceGroup(namespace, self.stack)
         self.parse(block_namespace, statement.block, dont_free=True)
         self.free_local_stack(block_namespace)
         self.add_instruction(Instruction.JMP, comparison_start)
         end_addr = len(self.instructions)
         self.instructions[compare_data_byte] = end_addr
-        
+
+        for b in self.loop_control_bytes[-1].breaks:
+            self.instructions[b] = end_addr
+        for c in self.loop_control_bytes[-1].continues:
+            self.instructions[c] = comparison_start
+        self.loop_control_bytes.pop()
         
                 
         
@@ -797,6 +832,14 @@ class Assembler:
                 
             elif isinstance(statement, While):
                 self.parse_while(NamespaceGroup(namespace, self.stack), statement)
+
+            elif isinstance(statement, Break):
+                self.add_instruction(Instruction.JMP, 0)
+                self.loop_control_bytes[-1].breaks.append(len(self.instructions)-1)
+
+            elif isinstance(statement, Continue):
+                self.add_instruction(Instruction.JMP, 0)
+                self.loop_control_bytes[-1].continues.append(len(self.instructions)-1)
                 
             else:
                 raise Exception("Unhandled statement type")
