@@ -393,7 +393,14 @@ class ASTParser:
                     next_name = self.consume(TokenType.IDENTIFIER, "Expected identifier for variable access")
                     hierarchy.append(next_name.lexeme)
                 return Access(hierarchy)
-            return Variable(self.previous().lexeme)
+            var = Variable(self.previous().lexeme)
+            if self.check(TokenType.PLUSPLUS):
+                self.consume(TokenType.PLUSPLUS)
+                var.increment = True
+            if self.check(TokenType.MINUSMINUS):
+                self.consume(TokenType.MINUSMINUS)
+                var.decrement = True
+            return var
 
         return Literal(1, Types.INT)
         

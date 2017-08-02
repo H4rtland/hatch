@@ -1,6 +1,29 @@
 import io;
 
+function int print_and_return(int number) {
+    io.print(number);
+    return number;
+}
+
 function void main() {
-    let int x = 10b;
-    io.print(x);
+    let int i = 0;
+    while (i++ < 10) {
+        io.print(i);
+    }
+    io.print(10c);
+
+    i = 0;
+    while (i < 10) {
+        i++;
+        io.print(i);
+    }
+    io.print(10c);
+
+    while (print_and_return(i--) > 1) {
+    }
+    io.print(10c);
+
+    for (let int c=100; c<111; c++) {
+        io.print(c);
+    }
 }

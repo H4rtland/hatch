@@ -109,11 +109,17 @@ class Let(Expression):
 class Variable(Expression):
     def __init__(self, name):
         self.name = name
+        self.increment = False
+        self.decrement = False
         
     def print(self, indent=0):
-        print("    "*indent + self.name)
+        print("    "*indent + str(self))
     
     def __repr__(self):
+        if self.increment:
+            return f"<Variable: {self.name}++>"
+        if self.decrement:
+            return f"<Variable: {self.name}-->"
         return f"<Variable: {self.name}>"
     
     def resolve_type(self, namespace, type_manager):

@@ -13,6 +13,26 @@ import uuid
 SAVED_REGISTERS = 2
 
 LoopControlBytes = namedtuple("LoopControlBytes", ["breaks", "continues"])
+
+class LoopContext:
+    def __init__(self, assembler):
+        self.assembler = assembler
+        self.end_addr = None
+        self.comparison_start = None
+
+    def __enter__(self):
+        self.assembler.loop_control_bytes.append(LoopControlBytes([], []))
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if self.end_addr is None or self.comparison_start is None:
+            raise Exception("Forgot to set end_addr or comparison_start")
+        for b in self.assembler.loop_control_bytes[-1].breaks:
+            self.assembler.instructions[b] = self.end_addr
+        for c in self.assembler.loop_control_bytes[-1].continues:
+            self.assembler.instructions[c] = self.comparison_start
+        self.assembler.loop_control_bytes.pop()
+
             
 class Assembler:
     def __init__(self, ast, sub_trees, called_function_names):
@@ -168,55 +188,9 @@ class Assembler:
         return self.instructions, self.function_addresses, data_start
     
     def parse_binary(self, namespace, binary):
-        if isinstance(binary.left, Literal):
-            self.add_instruction(Instruction.LDA, binary.left.value) # LDA value
-        elif isinstance(binary.left, Variable):
-            # self.add_instruction(Instruction.LDA, DataAddress(namespace.get_namespace()[binary.left.name]), True) # LDA [left_name]
-            self.add_instruction(Instruction.LDA, self.stack.id_on_stack(namespace.get_namespace()[binary.left.name]), stack_flag=True) # LDA [left_name]
-        elif isinstance(binary.left, Call):
-            self.parse_call(namespace, binary.left.callee, binary.left.args)
-            # move function return value into AX
-            self.add_instruction(Instruction.MOV, mov(Register.AX, Register.FX)) # MOV AX <- FX
-        elif isinstance(binary.left, Binary):
-            self.parse_binary(namespace, binary.left)
-        elif isinstance(binary.left, Index):
-            self.parse_index(namespace, binary.left.variable, binary.left.index, register=Register.AX)
-        elif isinstance(binary.left, Access):
-            if hasattr(binary.left, "access_at_position"):
-                self.add_instruction(Instruction.OFF, binary.left.access_at_position)
-                self.add_instruction(Instruction.LDA,
-                                     self.stack.id_on_stack(namespace.get_namespace()[binary.left.hierarchy[0]]),
-                                     stack_flag=True)
-                self.add_instruction(Instruction.OFF, 0)
-            else:
-                raise Exception("Don't know which position to access at")
-        else:
-            raise Exception("Unhandled binary left input")
-        
-        if isinstance(binary.right, Literal):
-            self.add_instruction(Instruction.LDB, binary.right.value) # LDB value
-        elif isinstance(binary.right, Variable):
-            # self.add_instruction(Instruction.LDB, DataAddress(namespace.get_namespace()[binary.right.name]), True) # LDB [right_name]
-            self.add_instruction(Instruction.LDB, self.stack.id_on_stack(namespace.get_namespace()[binary.right.name]), stack_flag=True) # LDB [right_name]
-        elif isinstance(binary.right, Call):
-            self.parse_call(namespace, binary.right.callee, binary.right.args)
-            # move function return value into BX
-            self.add_instruction(Instruction.MOV, mov(Register.BX, Register.FX)) # MOV BX <- FX
-        elif isinstance(binary.right, Index):
-            self.parse_index(namespace, binary.right.variable, binary.right.index, register=Register.BX)
-        elif isinstance(binary.right, Access):
-            if hasattr(binary.right, "access_at_position"):
-                self.add_instruction(Instruction.OFF, binary.right.access_at_position)
-                self.add_instruction(Instruction.LDB,
-                                     self.stack.id_on_stack(namespace.get_namespace()[binary.right.hierarchy[0]]),
-                                     stack_flag=True)
-                self.add_instruction(Instruction.OFF, 0)
-            else:
-                raise Exception("Don't know which position to access at")
-        else:
-            raise Exception("Unhandled binary right input")
-            
-        
+        self.load_into_register(namespace, binary.left)
+        self.load_into_register(namespace, binary.right, Register.BX)
+
         if binary.operator.token_type == TokenType.PLUS:
             self.add_instruction(Instruction.ADD, 0) # ADD
         elif binary.operator.token_type == TokenType.MINUS:
@@ -255,6 +229,18 @@ class Assembler:
                     self.add_instruction(Instruction.LDA, self.stack.id_on_stack(namespace.get_namespace()[arg.name]), stack_flag=True)
                     self.add_instruction(Instruction.PUSH, 1)
                     self.add_instruction(Instruction.STA, 1, stack_flag=True)
+                    extra_stack_vars += 1
+                    self.stack.temp_extra_stack_vars += 1
+                    if arg.increment:
+                        self.add_instruction(Instruction.INC,
+                                             self.stack.id_on_stack(namespace.get_namespace()[arg.name]),
+                                             stack_flag=True)
+                    elif arg.decrement:
+                        self.add_instruction(Instruction.DEC,
+                                             self.stack.id_on_stack(namespace.get_namespace()[arg.name]),
+                                             stack_flag=True)
+                    extra_stack_vars -= 1
+                    self.stack.temp_extra_stack_vars -= 1
             elif isinstance(arg, Binary):
                 self.parse_binary(namespace, arg)
                 self.add_instruction(Instruction.PUSH, 1)
@@ -392,46 +378,8 @@ class Assembler:
         
     
     def parse_comparison(self, namespace, condition):
-        if isinstance(condition.left, Literal):
-            self.add_instruction(Instruction.LDA, int(condition.left.value))
-        elif isinstance(condition.left, Variable):
-            #if self.variable_exists(namespace, condition.left):
-            self.add_instruction(Instruction.LDA, self.stack.id_on_stack(namespace.get_namespace()[condition.left.name]), stack_flag=True)
-        elif isinstance(condition.left, Call):
-            self.parse_call(namespace, condition.left.callee, condition.left.args)
-            self.add_instruction(Instruction.MOV, mov(Register.AX, Register.FX))
-        elif isinstance(condition.left, Index):
-            self.parse_index(namespace, condition.left.variable, condition.left.index, register=Register.AX)
-        elif isinstance(condition.left, Access):
-            if hasattr(condition.left, "access_at_position"):
-                self.add_instruction(Instruction.OFF, condition.left.access_at_position)
-                self.add_instruction(Instruction.LDA,
-                                     self.stack.id_on_stack(namespace.get_namespace()[condition.left.hierarchy[0]]),
-                                     stack_flag=True)
-                self.add_instruction(Instruction.OFF, 0)
-            else:
-                raise Exception("Don't know which position to access at")
-        else:
-            raise Exception(f"Unhandled if statement condition, {condition}")
-        
-        if isinstance(condition.right, Literal):
-            self.add_instruction(Instruction.LDB, int(condition.right.value))
-        elif isinstance(condition.right, Variable):
-            self.add_instruction(Instruction.LDB, self.stack.id_on_stack(namespace.get_namespace()[condition.right.name]), stack_flag=True)
-        elif isinstance(condition.right, Call):
-            self.parse_call(namespace, condition.right.callee, condition.right.args)
-            self.add_instruction(Instruction.MOV, mov(Register.BX, Register.FX))
-        elif isinstance(condition.right, Index):
-            self.parse_index(namespace, condition.left.variable, condition.left.index, register=Register.BX)
-        elif isinstance(condition.right, Access):
-            if hasattr(condition.right, "access_at_position"):
-                self.add_instruction(Instruction.OFF, condition.right.access_at_position)
-                self.add_instruction(Instruction.LDB,
-                                     self.stack.id_on_stack(namespace.get_namespace()[condition.right.hierarchy[0]]),
-                                     stack_flag=True)
-                self.add_instruction(Instruction.OFF, 0)
-        else:
-            raise Exception("Unhandled if statement condition")
+        self.load_into_register(namespace, condition.left)
+        self.load_into_register(namespace, condition.right, register=Register.BX)
     
     def parse_if(self, namespace, statement):
         then_index = None
@@ -472,7 +420,7 @@ class Assembler:
                 self.parse(NamespaceGroup(namespace, self.stack), statement.otherwise)
             self.instructions[then_end_index] = len(self.instructions)
         elif isinstance(statement.condition, Variable):
-            self.add_instruction(Instruction.LDA, self.stack.id_on_stack(namespace.get_namespace()[statement.condition.name]), stack_flag=True)
+            self.load_into_register(namespace, statement.condition)
             self.add_instruction(Instruction.LDB, 1)
             self.add_instruction(Instruction.CMP, 0)
             self.add_instruction(Instruction.JE, 0)
@@ -506,7 +454,7 @@ class Assembler:
             self.add_instruction(Instruction.STA, self.stack.id_on_stack(identifier), stack_flag=True) # STA func_return
         elif isinstance(statement.initial, Binary):
             # increment in place if variable and +1
-            if isinstance(statement.initial.left, Variable):
+            """if isinstance(statement.initial.left, Variable):
                 if isinstance(statement.initial.right, Literal):
                     if statement.initial.right.value == 1:
                         if statement.initial.operator.token_type == TokenType.PLUS:
@@ -522,7 +470,7 @@ class Assembler:
                             self.add_instruction(Instruction.PUSH, 1)
                             self.add_instruction(Instruction.STA, self.stack.id_on_stack(namespace.get_namespace()[statement.name.lexeme]), stack_flag=True)
                             self.add_instruction(Instruction.DEC, self.stack.id_on_stack(namespace.get_namespace()[statement.name.lexeme]), stack_flag=True)
-                            return
+                            return"""
             self.parse_binary(namespace, statement.initial)
             identifier = namespace.let(statement.name.lexeme)
             self.add_instruction(Instruction.PUSH, 1)
@@ -570,6 +518,7 @@ class Assembler:
         
     def parse_assign(self, namespace, statement):
         if not statement.name in namespace.get_namespace():
+            time.sleep(0.01)
             raise Exception(f"Assignment to uninitialised variable {statement.name}. Use 'let type name = value;' to initialise.")
         if isinstance(statement.value, Literal):
             value = int(statement.value.value)
@@ -673,21 +622,17 @@ class Assembler:
         self.add_instruction(Instruction.CMP, 0)
         self.add_instruction(compare_inst, 0)
         compare_data_byte = len(self.instructions)-1
-        self.loop_control_bytes.append(LoopControlBytes([], []))
-        block_namespace = NamespaceGroup(namespace, self.stack)
-        self.parse(block_namespace, statement.block, dont_free=True)
-        action_start = len(self.instructions)
-        self.parse_assign(namespace, statement.action)
-        self.free_local_stack(block_namespace)
-        self.add_instruction(Instruction.JMP, comparison_start)
-        end_addr = len(self.instructions)
-        self.instructions[compare_data_byte] = end_addr
 
-        for b in self.loop_control_bytes[-1].breaks:
-            self.instructions[b] = end_addr
-        for c in self.loop_control_bytes[-1].continues:
-            self.instructions[c] = comparison_start
-        self.loop_control_bytes.pop()
+        with LoopContext(self) as loop:
+            block_namespace = NamespaceGroup(namespace, self.stack)
+            self.parse(block_namespace, statement.block, dont_free=True)
+            action_start = len(self.instructions)
+            self.parse(namespace, statement.action, dont_free=True)
+            self.free_local_stack(block_namespace)
+            self.add_instruction(Instruction.JMP, comparison_start)
+            end_addr = len(self.instructions)
+            self.instructions[compare_data_byte] = end_addr
+            loop.comparison_start, loop.end_addr = comparison_start, end_addr
         
         self.add_instruction(Instruction.FREE, 1)
         self.stack.unstack(1)
@@ -698,17 +643,15 @@ class Assembler:
                 return
             else:
                 loop_start = len(self.instructions)
-                self.loop_control_bytes.append(LoopControlBytes([], []))
-                block_namespace = NamespaceGroup(namespace, self.stack)
-                self.parse(block_namespace, statement.block, dont_free=True)
-                self.free_local_stack(block_namespace)
-                self.add_instruction(Instruction.JMP, loop_start)
-                loop_end = len(self.instructions)
-                for b in self.loop_control_bytes[-1].breaks:
-                    self.instructions[b] = loop_end
-                for c in self.loop_control_bytes[-1].continues:
-                    self.instructions[c] = loop_start
-                self.loop_control_bytes.pop()
+
+                with LoopContext(self) as loop:
+                    block_namespace = NamespaceGroup(namespace, self.stack)
+                    self.parse(block_namespace, statement.block, dont_free=True)
+                    self.free_local_stack(block_namespace)
+                    self.add_instruction(Instruction.JMP, loop_start)
+                    loop_end = len(self.instructions)
+                    loop.comparison_start, loop.end_addr = loop_start, loop_end
+
                 return
 
         compare_inst = {
@@ -723,29 +666,30 @@ class Assembler:
         self.add_instruction(Instruction.CMP, 0)
         self.add_instruction(compare_inst, 0)
         compare_data_byte = len(self.instructions)-1
-        self.loop_control_bytes.append(LoopControlBytes([], []))
-        block_namespace = NamespaceGroup(namespace, self.stack)
-        self.parse(block_namespace, statement.block, dont_free=True)
-        self.free_local_stack(block_namespace)
-        self.add_instruction(Instruction.JMP, comparison_start)
-        end_addr = len(self.instructions)
-        self.instructions[compare_data_byte] = end_addr
 
-        for b in self.loop_control_bytes[-1].breaks:
-            self.instructions[b] = end_addr
-        for c in self.loop_control_bytes[-1].continues:
-            self.instructions[c] = comparison_start
-        self.loop_control_bytes.pop()
-        
-                
+        with LoopContext(self) as loop:
+            block_namespace = NamespaceGroup(namespace, self.stack)
+            self.parse(block_namespace, statement.block, dont_free=True)
+            self.free_local_stack(block_namespace)
+            self.add_instruction(Instruction.JMP, comparison_start)
+            end_addr = len(self.instructions)
+            self.instructions[compare_data_byte] = end_addr
+            loop.comparison_start, loop.end_addr = comparison_start, end_addr
+
         
     def parse(self, namespace, block, is_function=False, dont_free=False, parameter_identifiers=None):
         # print("Parsing a block with namespace", namespace.locals, namespace.get_namespace())
         if parameter_identifiers is None:
             parameter_identifiers = []
         already_popped = dont_free
+
+        statements = []
+        if not isinstance(block, Block):
+            statements = [block,]
+        else:
+            statements = block.statements
         
-        for statement in block.statements:
+        for statement in statements:
             if isinstance(statement, Block):
                 self.parse(NamespaceGroup(namespace, self.stack), statement)
             
@@ -840,9 +784,19 @@ class Assembler:
             elif isinstance(statement, Continue):
                 self.add_instruction(Instruction.JMP, 0)
                 self.loop_control_bytes[-1].continues.append(len(self.instructions)-1)
+
+            elif isinstance(statement, Variable):
+                if statement.increment:
+                    self.add_instruction(Instruction.INC,
+                                         self.stack.id_on_stack(namespace.get_namespace()[statement.name]),
+                                         stack_flag=True)
+                elif statement.decrement:
+                    self.add_instruction(Instruction.DEC,
+                                         self.stack.id_on_stack(namespace.get_namespace()[statement.name]),
+                                         stack_flag=True)
                 
             else:
-                raise Exception("Unhandled statement type")
+                raise Exception(f"Unhandled statement type: {statement}")
                     
         
         # local variables are freed at the end of a block
@@ -886,3 +840,44 @@ class Assembler:
                 self.add_instruction(Instruction.FREE, streak)
             if not is_return:
                 self.stack.unstack(len(local))
+
+
+    def load_into_register(self, namespace, expression, register=Register.AX):
+        load_inst = {Register.AX: Instruction.LDA,
+                     Register.BX: Instruction.LDB}[register]
+
+        if isinstance(expression, Literal):
+            self.add_instruction(load_inst, expression.value)
+
+        elif isinstance(expression, Variable):
+            self.add_instruction(load_inst, self.stack.id_on_stack(namespace.get_namespace()[expression.name]),
+                                 stack_flag=True)
+            if expression.increment:
+                self.add_instruction(Instruction.INC, self.stack.id_on_stack(namespace.get_namespace()[expression.name]),
+                                     stack_flag=True)
+            if expression.decrement:
+                self.add_instruction(Instruction.DEC, self.stack.id_on_stack(namespace.get_namespace()[expression.name]),
+                                     stack_flag=True)
+
+        elif isinstance(expression, Call):
+            self.parse_call(namespace, expression.callee, expression.args)
+            self.add_instruction(Instruction.MOV, mov(register, Register.FX))
+
+        elif isinstance(expression, Binary):
+            self.parse_binary(namespace, expression)
+
+        elif isinstance(expression, Index):
+            self.parse_index(namespace, expression.variable, expression.index, register=register)
+
+        elif isinstance(expression, Access):
+            if hasattr(expression, "access_at_position"):
+                self.add_instruction(Instruction.OFF, expression.access_at_position)
+                self.add_instruction(load_inst,
+                                     self.stack.id_on_stack(namespace.get_namespace()[expression.hierarchy[0]]),
+                                     stack_flag=True)
+                self.add_instruction(Instruction.OFF, 0)
+            else:
+                raise Exception("Don't know why position to access at")
+
+        else:
+            raise Exception(f"Unhandled load_into_register: {expression} -> {register}")

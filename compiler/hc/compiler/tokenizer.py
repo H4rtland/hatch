@@ -46,6 +46,8 @@ class TokenType(Enum):
     NEW = auto()
     BREAK = auto()
     CONTINUE = auto()
+    PLUSPLUS = auto()
+    MINUSMINUS = auto()
     
     
 class Token:
@@ -76,8 +78,6 @@ SINGLE_CHARS = {
     "]": TokenType.RIGHT_SQUARE,
     ",": TokenType.COMMA,
     ".": TokenType.DOT,
-    "-": TokenType.MINUS,
-    "+": TokenType.PLUS,
     "*": TokenType.STAR,
     ";": TokenType.SEMICOLON,
     "&": TokenType.AMPERSAND,
@@ -152,7 +152,17 @@ class Tokenizer:
             if self.peek_for("="):
                 return self.add_token(TokenType.NOT_EQUAL)
             return self.add_token(TokenType.NOT)
-        
+
+        if next_char == "+":
+            if self.peek_for("+"):
+                return self.add_token(TokenType.PLUSPLUS)
+            return self.add_token(TokenType.PLUS)
+
+        if next_char == "-":
+            if self.peek_for("-"):
+                return self.add_token(TokenType.MINUSMINUS)
+            return self.add_token(TokenType.MINUS)
+
         if next_char == "/":
             if self.peek_for("/"):
                 while (not self.at_end()) and self.peek(1) != "\n":
