@@ -367,6 +367,11 @@ class ASTParser:
                         char = Literal(self.previous().literal, Types.CHAR)
                         self.consume(TokenType.IDENTIFIER)
                         return char
+                    elif self.next().lexeme.lower() == "b":
+                        string_representation = str(self.previous().literal)
+                        binary_number = int(string_representation, base=2)
+                        self.consume(TokenType.IDENTIFIER)
+                        return Literal(binary_number, Types.INT)
                 return Literal(self.previous().literal, Types.INT)
             elif self.previous().token_type == TokenType.STRING:
                 unescaped_string = codecs.getdecoder("unicode_escape")(self.previous().literal)[0]
@@ -389,7 +394,7 @@ class ASTParser:
                     hierarchy.append(next_name.lexeme)
                 return Access(hierarchy)
             return Variable(self.previous().lexeme)
-        
+
         return Literal(1, Types.INT)
         
     def let(self, no_semicolon=False):
