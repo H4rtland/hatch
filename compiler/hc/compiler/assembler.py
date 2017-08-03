@@ -189,7 +189,20 @@ class Assembler:
     
     def parse_binary(self, namespace, binary):
         self.load_into_register(namespace, binary.left)
+
+        # Loading an index might require both registers, so save the value in AX to restore later if needed
+        if isinstance(binary.right, Index):
+            if isinstance(binary.right.index, Binary):
+                self.add_instruction(Instruction.PUSH, 1)
+                self.add_instruction(Instruction.STA, 1, stack_flag=True)
+                self.stack.temp_extra_stack_vars += 1
+
         self.load_into_register(namespace, binary.right, Register.BX)
+
+        if isinstance(binary.right, Index):
+            if isinstance(binary.right.index, Binary):
+                self.add_instruction(Instruction.LDA, 1, stack_flag=True)
+                self.stack.temp_extra_stack_vars -= 1
 
         if binary.operator.token_type == TokenType.PLUS:
             self.add_instruction(Instruction.ADD, 0) # ADD
