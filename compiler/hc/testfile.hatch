@@ -1,7 +1,12 @@
 import io;
 
+struct Car {
+    int wheels,
+    int seats,
+}
+
 function void main() {
-    let int[10] numbers = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
-    let int sum = numbers[2+2] + numbers[5+3];
-    io.print(sum);
+    let Car ford = new Car(4, 5);
+    ford.wheels = 3;
+    io.print(ford.wheels);
 }

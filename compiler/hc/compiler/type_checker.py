@@ -25,6 +25,7 @@ NamespaceVariable = namedtuple("NamespaceVariable", ["type", "is_array"])
 class NamespaceGroup:
     def __init__(self, **group):
         self.group = group
+        self.module = False
         
     def get(self, name, *subnames):
         if isinstance(self.group[name], NamespaceGroup) and len(subnames) > 0:
@@ -139,6 +140,7 @@ class TypeChecker:
             type_manager = TypeManager()
             for tree_name, (tree, sub_trees) in st.items():
                 module = NamespaceGroup()
+                module.module = True
                 for declaration in tree:
                     if isinstance(declaration, Function):
                         args = [NamespaceVariable(type_manager.get_type(arg.type.lexeme), arg.is_array) for arg in declaration.args]
@@ -316,6 +318,21 @@ class TypeChecker:
         for member in struct.members:
             if not type_manager.exists(member.type):
                 self.print_error(f"Type {member.type} does not exist")
+
+    @checker_for(AccessAssign)
+    def check_access_assign(self, access: AccessAssign, namespace, type_manager):
+        access.resolve_type(namespace, type_manager)
+        if not namespace.contains(access.access.hierarchy[0]):
+            self.print_error(f"Variable {access.access.hierarchy[0]} does not exist")
+        if namespace.get(access.access.hierarchy[0]).module:
+            self.print_error(f"Cannot assign to module ({access.access.hierarchy[0]})")
+        if not namespace.contains(*access.access.hierarchy):
+            self.print_error(f"Variable {access.access.hierarchy[0]} has no attribute {'.'.join(access.access.hierarchy[1:])}")
+        #if not namespace.contains(*access.access.hierarchy):
+        #    self.print_error(f"Variable {'.'.join(access.access.hierarchy)} does not exist")
+        if not access.access.resolve_type(namespace, type_manager) == access.value.resolve_type(namespace, type_manager):
+            self.print_error(f"Assignment type mismatch: {access.access.resolve_type(namespace, type_manager)} != {access.value.resolve_type(namespace, type_manager)}")
+        self.check_branch(access.value, namespace, type_manager)
 
     @checker_for(Break, Continue)
     def check_flow_control(self, control, namespace, type_manager):

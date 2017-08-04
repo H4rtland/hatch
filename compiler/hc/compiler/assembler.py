@@ -807,6 +807,15 @@ class Assembler:
                     self.add_instruction(Instruction.DEC,
                                          self.stack.id_on_stack(namespace.get_namespace()[statement.name]),
                                          stack_flag=True)
+
+            elif isinstance(statement, AccessAssign):
+                if hasattr(statement, "access_at_position"):
+                    self.load_into_register(namespace, statement.value)
+                    self.add_instruction(Instruction.OFF, statement.access_at_position)
+                    self.add_instruction(Instruction.STA, self.stack.id_on_stack(namespace.get_namespace()[statement.access.hierarchy[0]]), stack_flag=True)
+                    self.add_instruction(Instruction.OFF, 0)
+                else:
+                    raise Exception("Didn't know which position to access at")
                 
             else:
                 raise Exception(f"Unhandled statement type: {statement}")

@@ -351,6 +351,13 @@ class AccessAssign(Expression):
         self.access = access
         self.value = value
 
+    def resolve_type(self, namespace, type_manager):
+        group = namespace.get(*self.access.hierarchy[:-1])
+        if hasattr(group, "internal_structure"):
+            if not group.contains(self.access.hierarchy[-1]):
+                raise ExpressionValidationException(f"Value {self.access.hierarchy[-2]} has no attribute \"{self.access.hierarchy[-1]}\"")
+            self.access_at_position = group.internal_structure[self.access.hierarchy[-1]][0]
+
     def __repr__(self):
         return f"<AccessAssign: {'.'.join(self.access.hierarchy)} = {self.value}>"
         
