@@ -33,6 +33,9 @@ class Expression:
     def resolve_array(self, namespace):
         return False
 
+    def optimise(self):
+        return self
+
 class Block(Expression):
     def __init__(self, statements):
         self.statements = statements
@@ -42,6 +45,11 @@ class Block(Expression):
         for statement in self.statements:
             statement.print(indent+1)
         print("    "*indent + "}")
+
+    def optimise(self):
+        for index, statement in enumerate(self.statements):
+            self.statements[index] = statement.optimise()
+        return self
 
 class Function(Expression):
     def __init__(self, name, rtype, args, body, filename):
@@ -55,6 +63,10 @@ class Function(Expression):
         
     def resolve_type(self, namespace, type_manager):
         return type_manager.get_type(self.rtype.lexeme)
+
+    def optimise(self):
+        self.body.optimise()
+        return self
     
     def print(self, indent=0):
         args = ", ".join([type_.lexeme + " " + name.lexeme for (type_, name, *_) in self.args])
@@ -64,15 +76,16 @@ class Function(Expression):
     def __repr__(self):
         args = ", ".join([type_.lexeme + " " + name.lexeme for (type_, name, *_) in self.args])
         return f"<Function: {self.rtype.lexeme} {self.name.lexeme} ({args})>"
-        
-#class Expression:
-#    def __init__(self, expression):
-#        self.expression = expression
+
         
 class Assign(Expression):
     def __init__(self, name, value):
         self.name = name
         self.value = value
+
+    def optimise(self):
+        self.value = self.value.optimise()
+        return self
     
     def print(self, indent=0):
         print("    "*indent + f"<Assign: {self.name} = {self.value}>")
@@ -84,6 +97,11 @@ class AssignIndex(Expression):
     def __init__(self, left, right):
         self.left = left
         self.right = right
+
+    def optimise(self):
+        self.left = self.left.optimise()
+        self.right = self.right.optimise()
+        return self
         
     def __repr__(self):
         return f"<AssignIndex: {self.left.variable}[{self.left.index}] = {self.right}>"
@@ -99,6 +117,10 @@ class Let(Expression):
         self.initial = initial
         self.array = array
         self.length = length
+
+    def optimise(self):
+        self.initial = self.initial.optimise()
+        return self
         
     def print(self, indent=0):
         print("    "*indent + f"<Let: {self.vtype.lexeme} {self.name.lexeme} = {self.initial}>")
@@ -134,6 +156,10 @@ class Index(Expression):
     def __init__(self, variable, index):
         self.variable = variable
         self.index = index
+
+    def optimise(self):
+        self.index = self.index.optimise()
+        return self
         
     def __repr__(self):
         return f"<Index: {self.variable}[{self.index}]>"
@@ -162,6 +188,17 @@ class If(Expression):
         self.condition = condition
         self.then = then
         self.otherwise = otherwise
+
+    def optimise(self):
+        self.condition = self.condition.optimise()
+        self.then = self.then.optimise()
+        self.otherwise = self.otherwise.optimise()
+        if isinstance(self.condition, Literal):
+            if self.condition.value == True:
+                return self.then
+            elif self.condition.value == False:
+                return self.otherwise
+        return self
         
     def print(self, indent=0):
         print("    "*indent + f"<If {self.condition}>")
@@ -176,6 +213,11 @@ class Call(Expression):
         self.callee = callee
         self.paren = paren
         self.args = args
+
+    def optimise(self):
+        for index, arg in enumerate(self.args):
+            self.args[index] = arg.optimise()
+        return self
         
     def print(self, indent=0):
         print("    "*indent + str(self))
@@ -244,6 +286,10 @@ class Return(Expression):
     def resolve_type(self, namespace, type_manager):
         return self.value.resolve_type(namespace, type_manager)
 
+    def optimise(self):
+        self.value = self.value.optimise()
+        return self
+
     def print(self, indent=0):
         print("    "*indent + f"<Return: {self.value}>")
 
@@ -268,6 +314,19 @@ class Binary(Expression):
             return Types.BOOL
         else:
             return self.left.resolve_type(namespace, type_manager)
+
+    def optimise(self):
+        self.left = self.left.optimise()
+        self.right = self.right.optimise()
+        if isinstance(self.left, Literal) and isinstance(self.right, Literal) and self.operator.token_type in (TokenType.PLUS, TokenType.MINUS, TokenType.STAR, TokenType.SLASH):
+            value = {
+                TokenType.PLUS: self.left.value + self.right.value,
+                TokenType.MINUS: self.left.value - self.right.value,
+                TokenType.STAR: self.left.value * self.right.value,
+                TokenType.SLASH: self.left.value // self.right.value,
+            }[self.operator.token_type]
+            return Literal(value, Types.VOID)
+        return self
     
     def __repr__(self):
         return f"<Binary: {self.left} {self.operator.lexeme} {self.right}>"
@@ -289,6 +348,10 @@ class For(Expression):
         self.condition = condition
         self.action = action
         self.block = block
+
+    def optimise(self):
+        self.block = self.block.optimise()
+        return self
         
     def print(self, indent=0):
         print("    "*indent + f"<For: {self.declare}; {self.condition}; {self.action}>")
@@ -300,6 +363,10 @@ class While(Expression):
     def __init__(self, condition, block):
         self.condition = condition
         self.block = block
+
+    def optimise(self):
+        self.block = self.block.optimise()
+        return self
 
     def print(self, indent=0):
         print("    "*indent + f"<While: {self.condition}>")
@@ -359,6 +426,10 @@ class AccessAssign(Expression):
                 raise ExpressionValidationException(f"Value {self.access.hierarchy[-2]} has no attribute \"{self.access.hierarchy[-1]}\"")
             self.access_at_position = group.internal_structure[self.access.hierarchy[-1]][0]
 
+    def optimise(self):
+        self.value = self.value.optimise()
+        return self
+
     def __repr__(self):
         return f"<AccessAssign: {'.'.join(self.access.hierarchy)} = {self.value}>"
         
@@ -381,12 +452,17 @@ class StructCreate(Expression):
         self.struct_type = struct_type
         self.args = args
 
-    def __repr__(self):
-        return f"<StructCreate: {self.struct_type.lexeme}({', '.join([str(arg) for arg in self.args])})"
-
     def resolve_type(self, namespace, type_manager):
         self.actual_type = type_manager.get_type(self.struct_type.lexeme)
         return type_manager.get_type(self.struct_type.lexeme)
+
+    def optimise(self):
+        for index, arg in enumerate(self.args):
+            self.args[index] = arg.optimise()
+        return self
+
+    def __repr__(self):
+        return f"<StructCreate: {self.struct_type.lexeme}({', '.join([str(arg) for arg in self.args])})"
 
 class Break(Expression):
     def __init__(self):

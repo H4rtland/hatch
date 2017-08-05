@@ -25,6 +25,23 @@ def compile(source, debug=False, filename="main.hatch"):
             
     type_checker = TypeChecker(source, tree, sub_trees)
     called_function_names = type_checker.check()
+
+    def add_trees(tree, sub_trees):
+        tree = list(tree)
+        for name, st in sub_trees.items():
+            tree += add_trees(*st)
+        return tree
+
+    all_functions = add_trees(tree, sub_trees)
+
+    for function in all_functions:
+        function.optimise()
+
+    if debug:
+        print("------------------------\nOptimised tree:\n")
+        for trunk in tree:
+            trunk.print()
+        print()
         
     assembler = Assembler(tree, sub_trees, called_function_names)
     instructions, addresses, data_start = assembler.assemble()
