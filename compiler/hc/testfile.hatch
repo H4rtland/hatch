@@ -1,12 +1,7 @@
 import io;
 
-struct Car {
-    int wheels,
-    int seats,
-}
-
 function void main() {
-    let Car ford = new Car(4, 5);
-    ford.wheels = 3;
-    io.print(ford.wheels);
+    let int i = 0;
+    i = (2 + 3) * ((4 + 1) + 2) / 5;
+    io.print(i);
 }

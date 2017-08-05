@@ -191,18 +191,24 @@ class Assembler:
         self.load_into_register(namespace, binary.left)
 
         # Loading an index might require both registers, so save the value in AX to restore later if needed
+        saved_reg_a = False
         if isinstance(binary.right, Index):
             if isinstance(binary.right.index, Binary):
+                saved_reg_a = True
                 self.add_instruction(Instruction.PUSH, 1)
                 self.add_instruction(Instruction.STA, 1, stack_flag=True)
                 self.stack.temp_extra_stack_vars += 1
+        if isinstance(binary.right, Binary):
+            saved_reg_a = True
+            self.add_instruction(Instruction.PUSH, 1)
+            self.add_instruction(Instruction.STA, 1, stack_flag=True)
+            self.stack.temp_extra_stack_vars += 1
 
         self.load_into_register(namespace, binary.right, Register.BX)
 
-        if isinstance(binary.right, Index):
-            if isinstance(binary.right.index, Binary):
-                self.add_instruction(Instruction.LDA, 1, stack_flag=True)
-                self.stack.temp_extra_stack_vars -= 1
+        if saved_reg_a:
+            self.add_instruction(Instruction.LDA, 1, stack_flag=True)
+            self.stack.temp_extra_stack_vars -= 1
 
         if binary.operator.token_type == TokenType.PLUS:
             self.add_instruction(Instruction.ADD, 0) # ADD
@@ -887,6 +893,8 @@ class Assembler:
 
         elif isinstance(expression, Binary):
             self.parse_binary(namespace, expression)
+            if register == Register.BX:
+                self.add_instruction(Instruction.MOV, mov(Register.BX, Register.AX))
 
         elif isinstance(expression, Index):
             self.parse_index(namespace, expression.variable, expression.index, register=register)

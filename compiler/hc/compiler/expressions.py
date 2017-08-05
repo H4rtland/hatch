@@ -205,6 +205,7 @@ class Call(Expression):
             function = namespace.get_matching_function(self.callee.hierarchy, self.get_parameter_types(namespace, type_manager))
         else:
             # Shouldn't be anything else
+            time.sleep(0.01)
             raise Exception
 
         return function

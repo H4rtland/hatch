@@ -261,7 +261,7 @@ class ASTParser:
     def assignment(self):
         expr = self.equality()
         if self.match(TokenType.EQUAL):
-            value = self.assignment()
+            value = self.equality()
             if isinstance(expr, Variable):
                 return Assign(expr.name, value)
             if isinstance(expr, Index):
@@ -277,11 +277,11 @@ class ASTParser:
             operator = self.previous()
             right = self.comparison()
             expr = Binary(expr, operator, right)
-        
         return expr
     
     def comparison(self):
         expr = self.term()
+
         while self.match(TokenType.GREATER_EQUAL, TokenType.GREATER, TokenType.LESS, TokenType.LESS_EQUAL):
             operator = self.previous()
             right = self.term()
@@ -291,6 +291,7 @@ class ASTParser:
     
     def term(self):
         expr = self.factor()
+
         while self.match(TokenType.PLUS, TokenType.MINUS):
             operator = self.previous()
             right = self.factor()
@@ -299,6 +300,7 @@ class ASTParser:
     
     def factor(self):
         expr = self.unary()
+
         while self.match(TokenType.STAR, TokenType.SLASH):
             operator = self.previous()
             right = self.unary()
@@ -314,7 +316,14 @@ class ASTParser:
         if self.match(TokenType.MINUS):
             operator = self.previous()
             right = self.unary()
-            expr = Binary(operator, right)
+            expr = Binary(Literal(0, Types.INT), operator, right)
+        return self.brackets()
+
+    def brackets(self):
+        if self.match(TokenType.LEFT_BRACKET):
+            expr = self.equality()
+            self.consume(TokenType.RIGHT_BRACKET, "Expected closing right bracket")
+            return expr
         return self.call()
     
     
