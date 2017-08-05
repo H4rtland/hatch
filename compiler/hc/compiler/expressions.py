@@ -133,6 +133,7 @@ class Variable(Expression):
         self.name = name
         self.increment = False
         self.decrement = False
+        self.position_on_stack = None
         
     def print(self, indent=0):
         print("    "*indent + str(self))

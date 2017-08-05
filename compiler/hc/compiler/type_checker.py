@@ -7,6 +7,7 @@ import contextlib
 import time
 
 from compiler.expressions import *
+from compiler.internal_functions import InternalFunctions
 
 expression_checkers = {}
 
@@ -101,8 +102,7 @@ class NamespaceGroup:
         return f"NamespaceGroup({(','+newline_tab).join([name + '=' + str(item) for name, item in self.group.items()])})"
 
 internal_functions = {
-    "__internal_print":NamespaceFunction(Types.VOID, [NamespaceVariable(Types.INT, False)]),
-    "__internal_print_char":NamespaceFunction(Types.VOID, [NamespaceVariable(Types.CHAR, False)]),
+    function.__name__: NamespaceFunction(function.return_type, [NamespaceVariable(arg, False) for arg in function.arg_types]) for function in InternalFunctions.functions.values()
 }
 
 CallFromTo = namedtuple("CallFromTo", ["from_func", "to_func"])

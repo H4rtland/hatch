@@ -7,6 +7,7 @@ from compiler.expressions import *
 from compiler.tokenizer import TokenType
 from compiler.memory import MemoryModel, NamespaceGroup, FunctionAddress, DataAddress, Stack, NamespaceGroup
 from compiler.instructions import Instruction, Register, mov
+from compiler.internal_functions import InternalFunctions, InternalFunctionDefinitions
 
 import uuid
 
@@ -49,8 +50,6 @@ class Assembler:
         self.loop_control_bytes = []
 
         self.globals = NamespaceGroup(None, self.stack)
-        self.globals.add("__internal_print", 0)
-        self.globals.add("__internal_print_char", 0)
 
         self.current_module_name = None
         self.function_addresses = {"main":0}
@@ -118,39 +117,20 @@ class Assembler:
         self.parse(NamespaceGroup(self.globals, self.stack), self.main.body)
         self.add_instruction(Instruction.HLT, 0) # HLT
 
-        functions = self.non_main_functions.items()
-        """while len(functions) > 0:
-            functions = sorted(functions, key=lambda x: FunctionCounter.get_times_called(x[1].name.lexeme))
-            function_name, function = functions.pop(0)
-            print(function_name, function.name.lexeme, FunctionCounter.get_times_called(function.name.lexeme))
-            if FunctionCounter.get_times_called(function.name.lexeme) == 0:
-                break
-            location = len(self.instructions)
-            self.function_addresses[function_name] = location
-            self.stack = Stack()
-            self.globals = NamespaceGroup(None, self.stack)
-            self.globals.add("__internal_print", 0)
-            self.globals.add("__internal_print_char", 0)
-            namespace = NamespaceGroup(self.globals, self.stack)
-            parameter_identifiers = []
-            for arg in function.args:
-                parameter_identifiers.append(namespace.let(arg[1].lexeme, arg[3]))
-            self.current_module_name = function_name[0]
-            self.parse(namespace, function.body, is_function=True, parameter_identifiers=parameter_identifiers)"""
-
 
         for function_name, function in self.non_main_functions.items():
             if function.name.lexeme not in self.called_function_names:
                 continue
+
             location = len(self.instructions)
             if isinstance(function_name, str):
                 self.function_addresses[function_name] = location
             elif isinstance(function_name, tuple):
                 self.function_addresses[function_name[-1]] = location
+
             self.stack = Stack()
             self.globals = NamespaceGroup(None, self.stack)
-            self.globals.add("__internal_print", 0)
-            self.globals.add("__internal_print_char", 0)
+
             namespace = NamespaceGroup(self.globals, self.stack)
             parameter_identifiers = []
             for arg in function.args:
@@ -727,31 +707,17 @@ class Assembler:
             
             elif isinstance(statement, Call):
                 if isinstance(statement.callee, Access):
-                    #if not namespace.contains(*statement.callee.hierarchy):
-                    #    raise Exception(f"Call to undefined function {statement.callee.hierarchy}")
-                    #else:
                     self.parse_call(namespace, statement.callee, statement.args)
                 else:
-                        
-                    #if not statement.callee.name in namespace.get_namespace():
-                    #    raise Exception(f"Call to undefined function {statement.callee.name}")
-                    
-                    if statement.callee.name == "__internal_print":
+                    if statement.callee.name in InternalFunctions.functions.keys():
                         for arg in statement.args:
                             if isinstance(arg, Variable):
-                                if not arg.name in namespace.get_namespace():
-                                    raise Exception(f"Call with uninitialised variable {arg.name}")
-                                self.add_instruction(Instruction.PRX, self.stack.id_on_stack(namespace.get_namespace()[arg.name]), stack_flag=True) # PRX var
-                            elif isinstance(arg, Literal):
-                                self.add_instruction(Instruction.PRX, arg.value)
-                    elif statement.callee.name == "__internal_print_char":
-                        for arg in statement.args:
-                            if isinstance(arg, Literal):
-                                self.add_instruction(Instruction.PRC, int(arg.value))
-                            else:
-                                if not arg.name in namespace.get_namespace():
-                                    raise Exception(f"Call with uninitialised variable {arg.name}")
-                                self.add_instruction(Instruction.PRC, self.stack.id_on_stack(namespace.get_namespace()[arg.name]), stack_flag=True) # PRX var
+                                arg.position_on_stack = self.stack.id_on_stack(namespace.get_namespace()[arg.name])
+                        for instruction, data, *flags in getattr(InternalFunctionDefinitions, "_InternalFunctionDefinitions"+statement.callee.name)(*statement.args):
+                            flags = sum(flags)
+                            mem_flag = flags & 0b1000_0000 > 0
+                            stack_flag = flags & 0b0100_0000 > 0
+                            self.add_instruction(instruction, data, mem_flag=mem_flag, stack_flag=stack_flag)
                     elif not self.current_module_name is None:
                         if isinstance(statement.callee, Variable):
                             new_callee = Access((self.current_module_name, statement.callee.name))
