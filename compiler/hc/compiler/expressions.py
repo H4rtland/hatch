@@ -192,7 +192,8 @@ class If(Expression):
     def optimise(self):
         self.condition = self.condition.optimise()
         self.then = self.then.optimise()
-        self.otherwise = self.otherwise.optimise()
+        if not self.otherwise is None:
+            self.otherwise = self.otherwise.optimise()
         if isinstance(self.condition, Literal):
             if self.condition.value == True:
                 return self.then
