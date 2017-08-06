@@ -121,12 +121,12 @@ class ASTParser:
         return self.expression_statement()
     
     def find_lib(self):
+        if "HATCH_LIB" in os.environ:
+            return op.abspath(op.expanduser(os.environ["HATCH_LIB"]))
         locations = ["../lib", "../../lib", "./lib"]
         for location in locations:
             if op.exists(location):
                 return location
-            """    if op.exists(op.join(location, filename)):
-                    return location"""
 
     def find_module_lib(self, path):
         lib_location = self.find_lib()
