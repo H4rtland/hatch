@@ -38,6 +38,9 @@ class ASTParser:
     
     def check(self, *token_types):
         return self.tokens[self.position].token_type in token_types
+
+    def check_forward(self, position_forward, *token_types):
+        return self.tokens[self.position-1+position_forward].token_type in token_types
     
     def match(self, *token_types):
         if self.tokens[self.position].token_type in token_types:
@@ -403,6 +406,12 @@ class ASTParser:
                     hierarchy.append(next_name.lexeme)
                 return Access(hierarchy)
             var = Variable(self.previous().lexeme)
+            if self.check(TokenType.MINUS):
+                if self.check_forward(2, TokenType.GREATER):
+                    self.consume(TokenType.MINUS)
+                    self.consume(TokenType.GREATER)
+                    cast_to = self.consume(TokenType.IDENTIFIER, "Cast expression requires a type name to cast to")
+                    return Cast(var, cast_to.lexeme)
             if self.check(TokenType.PLUSPLUS):
                 self.consume(TokenType.PLUSPLUS)
                 var.increment = True

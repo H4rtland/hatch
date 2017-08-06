@@ -485,3 +485,23 @@ class Continue(Expression):
 
     def print(self, indent=0):
         print("    "*indent + str(self))
+
+class Cast(Expression):
+    def __init__(self, variable, cast_to):
+        self.variable = variable
+        self.cast_to = cast_to
+
+    def resolve_type(self, namespace, type_manager):
+        if not type_manager.is_cast_allowed(self.variable.resolve_type(namespace, type_manager), type_manager.get_type(self.cast_to)):
+            raise ExpressionValidationException(
+                f"Cast from type {self.variable.resolve_type(namespace, type_manager)} to type {type_manager.get_type(self.cast_to)} is not possible")
+        return type_manager.get_type(self.cast_to)
+
+    def optimise(self):
+        return self.variable
+
+    def __repr__(self):
+        return f"<Cast {self.variable} -> {self.cast_to}>"
+
+    def print(self, indent=0):
+        print("    "*indent + str(self))

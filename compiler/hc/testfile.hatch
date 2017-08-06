@@ -1,7 +1,11 @@
 import io;
 
 function void main() {
-    let int i = 0;
-    i = (2 + 3) * ((4 + 1) + 2) / 5;
-    io.print(i);
+    let int a = 65;
+    io.print(a->char);
+    io.print(10c);
+    let char five = 53c;
+    io.print(five);
+    io.print(10c);
+    io.print(five -> int);
 }

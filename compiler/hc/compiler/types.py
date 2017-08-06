@@ -33,6 +33,12 @@ class Types:
     STRING = Type("string", None)
     CHAR = Type("char", 1)
 
+ALLOWED_CASTS = {
+    Types.INT: (Types.CHAR,),
+    Types.CHAR: (Types.INT,),
+    Types.BOOL: (Types.INT,),
+}
+
 class TypeManager:
     def __init__(self):
         self.defined_types = {}
@@ -51,3 +57,8 @@ class TypeManager:
 
     def exists(self, type_name):
         return type_name in self.defined_types
+
+    def is_cast_allowed(self, type_from, type_to):
+        if type_from not in ALLOWED_CASTS:
+            return False
+        return type_to in ALLOWED_CASTS[type_from]
