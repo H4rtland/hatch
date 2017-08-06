@@ -206,9 +206,22 @@ class Assembler:
             self.add_instruction(Instruction.LDA, 1)
             self.instructions[jne_location-1] = len(self.instructions)
         else:
-            raise Exception("Unhandled binary operator")
+            raise Exception(f"Unhandled binary operator: {binary.operator}")
             
     def parse_call(self, namespace, func, args):
+        if isinstance(func, Variable):
+            if func.name in InternalFunctions.functions.keys():
+                for arg in args:
+                    if isinstance(arg, Variable):
+                        arg.position_on_stack = self.stack.id_on_stack(namespace.get_namespace()[arg.name])
+                for instruction, data, *flags in getattr(InternalFunctionDefinitions,
+                                                         "_InternalFunctionDefinitions" + func.name)(*args):
+                    flags = sum(flags)
+                    mem_flag = flags & 0b1000_0000 > 0
+                    stack_flag = flags & 0b0100_0000 > 0
+                    self.add_instruction(instruction, data, mem_flag=mem_flag, stack_flag=stack_flag)
+                return
+
         # Save register state to restore after function return
         self.add_instruction(Instruction.SAVE, 0)
         extra_stack_vars = SAVED_REGISTERS

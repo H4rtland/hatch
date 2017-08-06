@@ -1,11 +1,11 @@
 import io;
 
 function void main() {
-    let int a = 65;
-    io.print(a->char);
-    io.print(10c);
-    let char five = 53c;
-    io.print(five);
-    io.print(10c);
-    io.print(five -> int);
+    while (true) {
+        let int number = io.read_int();
+        io.print(number);
+        if (number == 128) {
+            break;
+        }
+    }
 }

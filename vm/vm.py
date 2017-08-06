@@ -19,6 +19,8 @@ class OctoEngine:
         self.stack = []
         self.call_stack = []
         self.memory_map = {}
+
+        self.read_buffer = []
         
         
         self.reg_a = Register("A")

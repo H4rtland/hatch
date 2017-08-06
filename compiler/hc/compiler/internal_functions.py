@@ -1,5 +1,5 @@
 from compiler.types import Types
-from compiler.instructions import Instruction
+from compiler.instructions import Instruction, Register
 from compiler.expressions import *
 
 MEM_FLAG = 0b1000_0000
@@ -32,3 +32,8 @@ class InternalFunctionDefinitions:
             yield Instruction.PRC, c.position_on_stack, STACK_FLAG
         elif isinstance(c, Literal):
             yield Instruction.PRC, c.value
+
+    @staticmethod
+    @register
+    def __internal_read_char() -> Types.CHAR:
+        yield Instruction.READ, 0

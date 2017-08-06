@@ -5,7 +5,7 @@ class Instruction(Enum):
     LDA =   0b00001
     LDB =   0b00010
     FREE =  0b00011
-    PRB =   0b00100
+    READ =   0b00100
     ADD =   0b00101
     HLT =   0b00110
     PRX =   0b00111

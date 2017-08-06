@@ -46,3 +46,15 @@ function void print(int[] data) {
     }
     __internal_print_char(10c);
 }
+
+function int read_int() {
+    let int number = 0;
+    let char digit = 0c;
+    while (true) {
+        digit = __internal_read_char();
+        if (digit == 10c) {
+            return number;
+        }
+        number = (number * 10) + (digit->int - 48);
+    }
+}

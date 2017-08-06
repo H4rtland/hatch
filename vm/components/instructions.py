@@ -1,3 +1,6 @@
+import sys
+import codecs
+
 from settings import debug as INSTRUCTION_DEBUG
 
 def debug(function):
@@ -265,6 +268,18 @@ def FREE(emulator, mem_flag, stack_flag, data):
             emulator.memory_map[i] = False
             emulator.memory[i] = 222 # Mark as freed for debugging purposes
         emulator.stack = emulator.stack[:-1]
+
+@debug_addr_data
+def READ(emulator, mem_flag, stack_flag, data):
+    if len(emulator.read_buffer) > 0:
+        char, emulator.read_buffer = emulator.read_buffer[0], emulator.read_buffer[1:]
+        emulator.reg_func.load(char)
+    else:
+        input_string = sys.stdin.readline()
+        unescaped_string = codecs.getdecoder("unicode_escape")(input_string)[0]
+        char_array = list(bytes(unescaped_string, "utf8"))
+        char, emulator.read_buffer = char_array[0], char_array[1:]
+        emulator.reg_func.load(char)
     
         
 instructions = {
@@ -272,7 +287,7 @@ instructions = {
     0b00001: LDA,
     0b00010: LDB,
     0b00011: FREE,
-    0b00100: PRB,
+    0b00100: READ,
     0b00101: ADD,
     0b00110: HLT,
     0b00111: PRX,
