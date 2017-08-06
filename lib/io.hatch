@@ -28,7 +28,7 @@ function void print(bool value) {
 
 function void print(string data) {
     let char x = 0c;
-    for(let int i=0; i<data; i=i+1) {
+    for(let int i=0; i<data; i++) {
         x = data[i];
         __internal_print_char(x);
     }
@@ -38,7 +38,7 @@ function void print(string data) {
 
 function void print(int[] data) {
     let int x = 0;
-    for(let int i=0; i<data; i=i+1) {
+    for(let int i=0; i<data; i++) {
         x = data[i];
         __internal_print(x);
         __internal_print_char(44c);
@@ -50,11 +50,8 @@ function void print(int[] data) {
 function int read_int() {
     let int number = 0;
     let char digit = 0c;
-    while (true) {
-        digit = __internal_read_char();
-        if (digit == 10c) {
-            return number;
-        }
+    while ((digit = __internal_read_char()) != 10c) {
         number = (number * 10) + (digit->int - 48);
     }
+    return number;
 }

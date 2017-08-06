@@ -83,6 +83,11 @@ class Assign(Expression):
         self.name = name
         self.value = value
 
+    def resolve_type(self, namespace, value):
+        if not namespace.contains(self.name):
+            raise ExpressionValidationException(f"Use of undefined variable '{self.name}'")
+        return namespace.get(self.name).type
+
     def optimise(self):
         self.value = self.value.optimise()
         return self

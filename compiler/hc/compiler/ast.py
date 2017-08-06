@@ -266,11 +266,13 @@ class ASTParser:
         if self.match(TokenType.EQUAL):
             value = self.equality()
             if isinstance(expr, Variable):
-                return Assign(expr.name, value)
+                assignment = Assign(expr.name, value)
             if isinstance(expr, Index):
-                return AssignIndex(expr, value)
+                assignment = AssignIndex(expr, value)
             if isinstance(expr, Access):
-                return AccessAssign(expr, value)
+                assignment = AccessAssign(expr, value)
+            self.token_to_expression(self.previous(), assignment)
+            return assignment
         return expr
     
     def equality(self):
@@ -324,7 +326,7 @@ class ASTParser:
 
     def brackets(self):
         if self.match(TokenType.LEFT_BRACKET):
-            expr = self.equality()
+            expr = self.expression()
             self.consume(TokenType.RIGHT_BRACKET, "Expected closing right bracket")
             return expr
         return self.call()

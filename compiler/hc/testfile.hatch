@@ -1,11 +1,10 @@
 import io;
 
+function int remainder(int dividend, int divisor) {
+    return dividend - ((dividend/divisor) * divisor);
+}
+
 function void main() {
-    while (true) {
-        let int number = io.read_int();
-        io.print(number);
-        if (number == 128) {
-            break;
-        }
-    }
+    let int dividend = io.read_int();
+    io.print(remainder(dividend, 5));
 }

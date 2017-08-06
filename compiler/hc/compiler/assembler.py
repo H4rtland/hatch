@@ -178,7 +178,7 @@ class Assembler:
                 self.add_instruction(Instruction.PUSH, 1)
                 self.add_instruction(Instruction.STA, 1, stack_flag=True)
                 self.stack.temp_extra_stack_vars += 1
-        if isinstance(binary.right, Binary):
+        if isinstance(binary.right, (Binary, Assign)):
             saved_reg_a = True
             self.add_instruction(Instruction.PUSH, 1)
             self.add_instruction(Instruction.STA, 1, stack_flag=True)
@@ -670,6 +670,7 @@ class Assembler:
 
         compare_inst = {
             TokenType.EQUAL_EQUAL: Instruction.JNE,
+            TokenType.NOT_EQUAL: Instruction.JE,
             TokenType.LESS: Instruction.JGE,
             TokenType.GREATER: Instruction.JLE,
             TokenType.LESS_EQUAL: Instruction.JG,
@@ -889,6 +890,11 @@ class Assembler:
                 self.add_instruction(Instruction.OFF, 0)
             else:
                 raise Exception("Don't know why position to access at")
+
+        elif isinstance(expression, Assign):
+            self.parse_assign(namespace, expression)
+            if register == Register.BX:
+                self.add_instruction(Instruction.MOV, mov(Register.BX, Register.AX))
 
         else:
             raise Exception(f"Unhandled load_into_register: {expression} -> {register}")

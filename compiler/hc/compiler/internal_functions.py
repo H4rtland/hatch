@@ -1,5 +1,5 @@
 from compiler.types import Types
-from compiler.instructions import Instruction, Register
+from compiler.instructions import Instruction, Register, mov
 from compiler.expressions import *
 
 MEM_FLAG = 0b1000_0000
