@@ -188,7 +188,9 @@ class Assembler:
 
         if saved_reg_a:
             self.add_instruction(Instruction.LDA, 1, stack_flag=True)
+            self.add_instruction(Instruction.FREE, 1)
             self.stack.temp_extra_stack_vars -= 1
+
 
         if binary.operator.token_type == TokenType.PLUS:
             self.add_instruction(Instruction.ADD, 0) # ADD
