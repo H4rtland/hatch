@@ -49,6 +49,7 @@ class Block(Expression):
     def optimise(self):
         for index, statement in enumerate(self.statements):
             self.statements[index] = statement.optimise()
+        self.statements = [statement for statement in self.statements if not statement is None]
         return self
 
 class Function(Expression):
@@ -198,6 +199,10 @@ class If(Expression):
     def optimise(self):
         self.condition = self.condition.optimise()
         self.then = self.then.optimise()
+        
+        if len(self.then.statements) == 0 and (self.otherwise is None or len(self.otherwise.statements) == 0):
+            return self.condition
+        
         if not self.otherwise is None:
             self.otherwise = self.otherwise.optimise()
         if isinstance(self.condition, Literal):
@@ -205,6 +210,7 @@ class If(Expression):
                 return self.then
             elif self.condition.value == False:
                 return self.otherwise
+            
         return self
         
     def print(self, indent=0):
@@ -358,6 +364,8 @@ class For(Expression):
 
     def optimise(self):
         self.block = self.block.optimise()
+        # if len(self.block.statements) == 0:
+        #     return None
         return self
         
     def print(self, indent=0):
@@ -373,6 +381,8 @@ class While(Expression):
 
     def optimise(self):
         self.block = self.block.optimise()
+        # if len(self.block.statements) == 0:
+        #     return None
         return self
 
     def print(self, indent=0):
